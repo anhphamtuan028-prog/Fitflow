@@ -1,0 +1,2401 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="FitFlow v4.0" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#090d16" />
+  <title>FitFlow Pro Max v4.0 - All-in-One Coaching</title>
+
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>⚡</text></svg>" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overscroll-behavior-y: none;
+    }
+    .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.96); opacity: 0.85; }
+      50% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(0.96); opacity: 0.85; }
+    }
+    .animate-ring { animation: pulse-ring 2s infinite ease-in-out; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // 1. ÂM THANH CÒI & GIỌNG ĐỌC HUẤN LUYỆN VIÊN TIẾNG VIỆT
+    const playBeep = (freq = 880, duration = 180, type = "sine") => {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.type = type;
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => { osc.stop(); ctx.close(); }, duration);
+      } catch (e) {}
+    };
+
+    const speakVN = (text, enabled = true) => {
+      if (!enabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = "vi-VN";
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
+    };
+
+    // 2. ĐỒ HỌA SINH ĐỘNG 3 BƯỚC STEP 1 - STEP 2 - STEP 3 (MỞ RỘNG WALL PILATES, CHAIR YOGA, STRETCH, OUTDOOR)
+    const StepDiagram = ({ type, isLive, muscleHighlight }) => {
+      const [liveStep, setLiveStep] = useState(0);
+
+      useEffect(() => {
+        if (!isLive) return;
+        const interval = setInterval(() => {
+          setLiveStep((prev) => (prev + 1) % 3);
+        }, 800);
+        return () => clearInterval(interval);
+      }, [isLive]);
+
+      const renderPose = (stepIndex) => {
+        // A. WALL PILATES (Tập dựa tường êm khớp)
+        if (type === "wall") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-purple-700/60 mb-1.5">
+              {/* Mặt sàn & Bức tường bên phải */}
+              <line x1="10" y1="84" x2="210" y2="84" stroke="#475569" strokeWidth="3" />
+              <line x1="185" y1="10" x2="185" y2="84" stroke="#a855f7" strokeWidth="5" />
+              <rect x="8" y="6" width="102" height="17" rx="4" fill="#a855f725" stroke="#a855f760" />
+              <text x="59" y="17" fill="#e9d5ff" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🧱 Wall Pilates: {muscleHighlight || "Đùi & Bụng"}
+              </text>
+              <rect x="118" y="6" width="58" height="18" rx="4" fill="#000000bb" />
+              <text x="147" y="18" fill="#fff" fontSize="10.5" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  {/* Nằm ngửa gác chân vuông góc lên tường hoặc dựa lưng tường */}
+                  <line x1="85" y1="81" x2="140" y2="81" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="72" cy="79" r="7" fill="#fcd34d" />
+                  <polyline points="140,81 155,52 182,52" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                  <line x1="150" y1="45" x2="180" y2="45" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  {/* Mũi tên đỏ nâng hông rời sàn dựa lực vào tường */}
+                  <line x1="130" y1="76" x2="130" y2="42" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="130,42 125,50 135,50" fill="#ef4444" />
+                  <circle cx="72" cy="79" r="7" fill="#fcd34d" />
+                  <line x1="85" y1="80" x2="145" y2="54" stroke="#ef4444" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="145,54 158,42 182,42" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  {/* Mũi tên xanh lá kiểm soát hạ từng đốt sống */}
+                  <line x1="130" y1="44" x2="130" y2="76" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="130,76 125,68 135,68" fill="#22c55e" />
+                  <circle cx="72" cy="79" r="7" fill="#fcd34d" />
+                  <line x1="85" y1="81" x2="140" y2="81" stroke="#22c55e" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="140,81 155,52 182,52" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        // B. CHAIR YOGA / VĂN PHÒNG (Tập trên ghế)
+        if (type === "chair") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-amber-600/60 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#475569" strokeWidth="3" />
+              {/* Khung ghế văn phòng */}
+              <polyline points="88,36 88,62 118,62 118,84" fill="none" stroke="#f59e0b" strokeWidth="3.5" />
+              <line x1="88" y1="62" x2="88" y2="84" stroke="#f59e0b" strokeWidth="3.5" />
+
+              <rect x="8" y="6" width="102" height="17" rx="4" fill="#f59e0b25" stroke="#f59e0b60" />
+              <text x="59" y="17" fill="#fde68a" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🪑 Chair Yoga: {muscleHighlight || "Vai & Cột sống"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <circle cx="102" cy="22" r="7" fill="#fcd34d" />
+                  <line x1="102" y1="30" x2="102" y2="58" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="102,58 124,58 124,82" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                  <line x1="102" y1="38" x2="122" y2="48" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  {/* Mũi tên đỏ vươn mở lồng ngực & tay lên cao */}
+                  <line x1="128" y1="45" x2="128" y2="16" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="128,16 123,24 133,24" fill="#ef4444" />
+                  <circle cx="102" cy="22" r="7" fill="#fcd34d" />
+                  <line x1="102" y1="30" x2="102" y2="58" stroke="#ef4444" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="102,58 124,58 145,58" fill="none" stroke="#22c55e" strokeWidth="5.5" strokeLinecap="round" />
+                  <line x1="102" y1="34" x2="116" y2="14" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  {/* Mũi tên xanh xoay mở vai ra sau */}
+                  <line x1="76" y1="32" x2="96" y2="32" stroke="#22c55e" strokeWidth="3" />
+                  <circle cx="102" cy="22" r="7" fill="#fcd34d" />
+                  <line x1="102" y1="30" x2="102" y2="58" stroke="#22c55e" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="102,58 124,58 124,82" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                  <line x1="102" y1="36" x2="80" y2="44" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        // C. ĐI BỘ & CHẠY BỘ CÔNG VIÊN (walk / run)
+        if (type === "walk" || type === "run") {
+          const isRun = type === "run";
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-emerald-700/60 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#10b981" strokeWidth="3" strokeDasharray={isRun ? "8 4" : "none"} />
+              <circle cx="32" cy="45" r="14" fill="#065f46" opacity="0.5" />
+              <line x1="32" y1="55" x2="32" y2="84" stroke="#047857" strokeWidth="3" />
+
+              <rect x="8" y="6" width="96" height="17" rx="4" fill="#10b98125" stroke="#10b98160" />
+              <text x="56" y="17" fill="#6ee7b7" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🌳 {muscleHighlight || "Tim mạch & Khớp"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <line x1="105" y1="14" x2="98" y2="80" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="3" />
+                  <circle cx="112" cy="20" r="7" fill="#fcd34d" />
+                  <line x1="112" y1="28" x2="108" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="110,34 100,45 114,48" fill="none" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                  <line x1="108" y1="54" x2="124" y2="82" stroke="#22c55e" strokeWidth="5.5" strokeLinecap="round" />
+                  <line x1="108" y1="54" x2="92" y2="82" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  <line x1="130" y1="42" x2="165" y2="42" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="165,42 156,37 156,47" fill="#ef4444" />
+                  <circle cx="118" cy="20" r="7" fill="#fcd34d" />
+                  <line x1="116" y1="28" x2="110" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <polyline points="114,34 126,44 134,36" fill="none" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                  <line x1="110" y1="54" x2="132" y2="78" stroke="#ef4444" strokeWidth="5.5" strokeLinecap="round" />
+                  <polyline points="110,54 95,68 84,78" fill="none" stroke="#e2e8f0" strokeWidth="5.5" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  <line x1="138" y1="58" x2="138" y2="80" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="138,80 133,72 143,72" fill="#22c55e" />
+                  <circle cx="115" cy="20" r="7" fill="#fcd34d" />
+                  <line x1="115" y1="28" x2="112" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="112" y1="54" x2="128" y2="82" stroke="#22c55e" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="112" y1="54" x2="96" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        // D. CHỐNG ĐẨY / ĐẨY VAI CHỮ V (pike / pushup)
+        if (type === "pike" || type === "pushup") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+              <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+              <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🔥 {muscleHighlight || "Vai & Ngực"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <polyline points="35,45 95,12 165,42" fill="none" stroke="#ef4444" strokeWidth="3" />
+                  <line x1="45" y1="82" x2="95" y2="24" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="95" y1="24" x2="145" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="138" cy="48" r="6" fill="#ef4444" opacity="0.85" />
+                  <line x1="145" y1="54" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <circle cx="156" cy="54" r="7" fill="#fcd34d" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  <line x1="125" y1="15" x2="168" y2="42" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="168,42 158,42 165,33" fill="#ef4444" />
+                  <line x1="45" y1="82" x2="100" y2="34" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="100" y1="34" x2="158" y2="68" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="146" cy="60" r="6.5" fill="#ef4444" />
+                  <line x1="158" y1="68" x2="142" y2="74" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                  <line x1="142" y1="74" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                  <circle cx="168" cy="72" r="7" fill="#fcd34d" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  <line x1="132" y1="76" x2="118" y2="42" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="118,42 114,51 125,48" fill="#22c55e" />
+                  <line x1="45" y1="82" x2="95" y2="24" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="95" y1="24" x2="145" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="138" cy="48" r="6" fill="#22c55e" opacity="0.85" />
+                  <line x1="145" y1="54" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <circle cx="156" cy="54" r="7" fill="#fcd34d" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        // E. SQUAT / THÂN DƯỚI
+        if (type === "squat") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+              <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+              <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🔥 {muscleHighlight || "Đùi & Mông"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <line x1="90" y1="15" x2="90" y2="82" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="4" />
+                  <circle cx="110" cy="18" r="7" fill="#fcd34d" />
+                  <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="110" y1="52" x2="110" y2="82" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="110" y1="32" x2="136" y2="32" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  <line x1="68" y1="25" x2="68" y2="62" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="68,62 63,53 73,53" fill="#ef4444" />
+                  <circle cx="115" cy="30" r="7" fill="#fcd34d" />
+                  <line x1="112" y1="38" x2="92" y2="58" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="92" y1="58" x2="118" y2="58" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="118" y1="58" x2="112" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <line x1="110" y1="42" x2="140" y2="42" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  <line x1="68" y1="65" x2="68" y2="25" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="68,25 63,34 73,34" fill="#22c55e" />
+                  <circle cx="110" cy="18" r="7" fill="#fcd34d" />
+                  <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="110" y1="52" x2="110" y2="82" stroke="#22c55e" strokeWidth="6" strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        // Mặc định: PLANK / GIÃN CƠ / SOFA YOGA
+        return (
+          <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+            <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+            <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+            <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+              🔥 {muscleHighlight || "Bụng & Lưng"}
+            </text>
+            <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+            <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+              STEP {stepIndex + 1}
+            </text>
+            {stepIndex === 0 && (
+              <g>
+                <line x1="35" y1="45" x2="165" y2="45" stroke="#ef4444" strokeWidth="2.5" />
+                <line x1="45" y1="82" x2="95" y2="55" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="55" x2="150" y2="55" stroke="#ef4444" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="55" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="55" r="7" fill="#fcd34d" />
+              </g>
+            )}
+            {stepIndex === 1 && (
+              <g>
+                <line x1="115" y1="76" x2="115" y2="38" stroke="#ef4444" strokeWidth="3" />
+                <polygon points="115,38 110,46 120,46" fill="#ef4444" />
+                <line x1="45" y1="82" x2="95" y2="48" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="48" x2="150" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="52" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="52" r="7" fill="#fcd34d" />
+              </g>
+            )}
+            {stepIndex === 2 && (
+              <g>
+                <line x1="95" y1="34" x2="145" y2="34" stroke="#22c55e" strokeWidth="3" />
+                <line x1="45" y1="82" x2="95" y2="52" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="52" x2="150" y2="52" stroke="#22c55e" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="52" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="52" r="7" fill="#fcd34d" />
+              </g>
+            )}
+          </svg>
+        );
+      };
+
+      if (isLive) return <div className="p-0.5">{renderPose(liveStep)}</div>;
+      return (
+        <div className="space-y-1">
+          {renderPose(0)}
+          {renderPose(1)}
+          {renderPose(2)}
+        </div>
+      );
+    };
+
+    // 3. GÓI KHỞI ĐỘNG ĐẦU BUỔI & GIÃN CƠ CUỐI BUỔI TỰ ĐỘNG GẮN (CHUẨN HÓA HOME WORKOUT)
+    const STANDARD_WARMUP = [
+      {
+        id: "wu_auto_1",
+        phaseTag: "🔥 KHỞI ĐỘNG ĐẦU BUỔI",
+        name: "Xoay Mở Khớp Vai, Cổ Tay & Cổ Chân",
+        baseSets: 1,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 15,
+        type: "chair",
+        muscle: "Làm nóng Dịch khớp",
+        steps: [
+          "STEP 1: Đứng thẳng, đan hai bàn tay xoay kỹ cổ tay và cổ chân mỗi bên 15 giây.",
+          "STEP 2: Đặt hai bàn tay lên mỏm vai, xoay tròn khớp vai rộng ra sau 15 vòng.",
+          "STEP 3: Nghiêng nhẹ cổ sang trái - phải để giải phóng căng cơ gáy trước khi tập."
+        ]
+      },
+      {
+        id: "wu_auto_2",
+        phaseTag: "🔥 KHỞI ĐỘNG ĐẦU BUỔI",
+        name: "Cat-Cow Đứng Mở Khớp Hông & Cột Sống",
+        baseSets: 1,
+        repsText: "45 giây",
+        workSec: 45,
+        rest: 20,
+        type: "squat",
+        muscle: "Cột sống & Khớp hông",
+        steps: [
+          "STEP 1: Hai chân rộng bằng vai, gối hơi chùng nhẹ, hai tay đặt lên đùi.",
+          "STEP 2: Hít vào ưỡn nhẹ ngực mở hai bả vai ra sau.",
+          "STEP 3: Thở ra cuộn tròn lưng kéo giãn toàn bộ đốt sống thắt lưng."
+        ]
+      }
+    ];
+
+    const STANDARD_COOLDOWN = [
+      {
+        id: "cd_auto_1",
+        phaseTag: "🧘 GIÃN CƠ CUỐI BUỔI",
+        name: "Child's Pose (Tư Thế Em Bé Thả Lỏng Lưng)",
+        baseSets: 1,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 15,
+        type: "pike",
+        muscle: "Giãn Thắt lưng & Vai",
+        steps: [
+          "STEP 1: Quỳ gối trên sàn/thảm, ngồi lùi mông chạm nhẹ lên hai gót chân.",
+          "STEP 2: Vươn dài hai tay về phía trước, hạ thấp ngực hoàn toàn xuống sàn.",
+          "STEP 3: Hít sâu bằng mũi 4 giây, thở chậm bằng miệng 6 giây để hạ nhịp tim."
+        ]
+      },
+      {
+        id: "cd_auto_2",
+        phaseTag: "🧘 GIÃN CƠ CUỐI BUỔI",
+        name: "Nằm Xoay Vặn Cột Sống Thư Giãn Đĩa Đệm",
+        baseSets: 1,
+        repsText: "60 giây (30s/bên)",
+        workSec: 60,
+        rest: 10,
+        type: "plank",
+        muscle: "Đĩa đệm & Cơ liên sườn",
+        steps: [
+          "STEP 1: Nằm ngửa thoải mái, dang rộng hai tay ngang vai.",
+          "STEP 2: Co gối phải đổ nhẹ sang bên trái, mắt nhìn sang tay phải.",
+          "STEP 3: Giữ 30 giây cảm nhận vùng lưng dưới được giải phóng rồi đổi bên."
+        ]
+      }
+    ];
+
+    // 4. THƯ VIỆN BÀI TẬP CHUYÊN BIỆT ĐA DẠNG (WALL PILATES, CHAIR YOGA, SOFA YOGA, SOMATIC, TƯ THẾ LƯNG, TRƯỚC KHI NGỦ)
+    const DEFAULT_LIBRARY = [
+      {
+        id: "lib_wp1",
+        category: "wall_pilates",
+        catName: "🧱 Wall Pilates (Tập Tường)",
+        name: "Wall Glute Bridge (Cầu Mông Đạp Tường)",
+        baseSets: 3,
+        repsText: "15 lần",
+        workSec: 45,
+        rest: 40,
+        type: "wall",
+        muscle: "Mông, Đùi sau & Lưng dưới",
+        steps: [
+          "STEP 1: Nằm ngửa, đặt hai lòng bàn chân áp phẳng lên tường sao cho gối vuông góc 90 độ.",
+          "STEP 2: Ấn gót chân vào tường, siết cơ mông cuộn từng đốt sống nâng hông lên cao.",
+          "STEP 3: Giữ 2 giây ở đỉnh rồi hạ chậm từng đốt sống xuống thảm. Không gây áp lực khớp gối!"
+        ]
+      },
+      {
+        id: "lib_wp2",
+        category: "wall_pilates",
+        catName: "🧱 Wall Pilates (Tập Tường)",
+        name: "Wall Roll-Down & Angel (Thiên Thần Áp Tường Trị Gù)",
+        baseSets: 3,
+        repsText: "12 lần",
+        workSec: 45,
+        rest: 30,
+        type: "wall",
+        muscle: "Mở Vai, Ngực & Chống gù",
+        steps: [
+          "STEP 1: Đứng dựa sát mông, lưng trên và đầu vào tường, chân bước cách tường 15cm.",
+          "STEP 2: Áp sát mu bàn tay và khuỷu tay vào tường tạo hình chữ W.",
+          "STEP 3: Trượt chậm hai tay lên cao thành chữ Y rồi kéo xuống chữ W, giữ lưng ép sát tường."
+        ]
+      },
+      {
+        id: "lib_wp3",
+        category: "wall_pilates",
+        catName: "🧱 Wall Pilates (Tập Tường)",
+        name: "Wall Leg Lift Crunch (Gập Bụng Gác Chân Lên Tường)",
+        baseSets: 3,
+        repsText: "15 lần",
+        workSec: 45,
+        rest: 40,
+        type: "wall",
+        muscle: "Cơ Bụng trên & Bụng dưới",
+        steps: [
+          "STEP 1: Nằm ngửa, duỗi hai chân gác lên tường tạo góc 90 độ với hông.",
+          "STEP 2: Thở ra, nâng nhẹ vai rời sàn vươn hai tay chạm về phía cổ chân.",
+          "STEP 3: Hít vào hạ vai xuống êm ái, phần thắt lưng luôn được tường hỗ trợ an toàn."
+        ]
+      },
+      {
+        id: "lib_cy1",
+        category: "chair_yoga",
+        catName: "🪑 Chair Yoga (Ghế Văn Phòng)",
+        name: "Seated Cat-Cow & Chest Opener (Mở Ngực Trên Ghế)",
+        baseSets: 3,
+        repsText: "45 giây",
+        workSec: 45,
+        rest: 20,
+        type: "chair",
+        muscle: "Cột sống ngực & Cổ vai gáy",
+        steps: [
+          "STEP 1: Ngồi ở 1/2 mép ghế trước, hai bàn chân đặt vuông góc mặt sàn.",
+          "STEP 2: Hít sâu, đan tay sau lưng ghế ưỡn ngực, kéo hai bả vai khép ra sau.",
+          "STEP 3: Thở ra, đưa hai tay ôm lấy vai và cuộn nhẹ lưng trên để giãn cơ bả vai."
+        ]
+      },
+      {
+        id: "lib_cy2",
+        category: "chair_yoga",
+        catName: "🪑 Chair Yoga (Ghế Văn Phòng)",
+        name: "Seated Figure-4 Hip Stretch (Giãn Cơ Hình Lê Trị Đau Thần Kinh Tọa)",
+        baseSets: 2,
+        repsText: "45 giây/bên",
+        workSec: 45,
+        rest: 20,
+        type: "chair",
+        muscle: "Khớp Hông & Cơ mông sâu",
+        steps: [
+          "STEP 1: Ngồi thẳng lưng trên ghế, vắt mắt cá chân phải lên đầu gối chân trái (hình số 4).",
+          "STEP 2: Giữ lưng thẳng, từ từ gập nhẹ người về phía trước cho tới khi căng dễ chịu ở mông phải.",
+          "STEP 3: Hít thở sâu 30-45 giây rồi đổi chân. Cực kỳ tốt cho người ngồi văn phòng 8 tiếng!"
+        ]
+      },
+      {
+        id: "lib_sf1",
+        category: "sofa_somatic",
+        catName: "🛋️ Sofa Yoga & Somatic",
+        name: "Legs-Up-The-Sofa (Gác Chân Lên Sofa Bơm Máu Tĩnh Mạch)",
+        baseSets: 1,
+        repsText: "3 phút",
+        workSec: 180,
+        rest: 20,
+        type: "wall",
+        muscle: "Tuần hoàn chân & Hạ huyết áp",
+        steps: [
+          "STEP 1: Nằm trên thảm cạnh ghế Sofa (hoặc trên giường), gác hai bắp chân lên đệm Sofa.",
+          "STEP 2: Đặt một tay lên ngực, một tay lên bụng, thả lỏng toàn bộ cơ mặt và hai vai.",
+          "STEP 3: Hít thở bụng chậm rãi giúp máu và dịch ứ đọng ở cổ chân chảy ngược về tim."
+        ]
+      },
+      {
+        id: "lib_sf2",
+        category: "sofa_somatic",
+        catName: "🛋️ Sofa Yoga & Somatic",
+        name: "Somatic Shoulder & Neck Release (Giải Tỏa Căng Cơ Thần Kinh)",
+        baseSets: 2,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 20,
+        type: "chair",
+        muscle: "Hệ thần kinh & Cơ thang vai",
+        steps: [
+          "STEP 1: Ngồi tựa lưng êm trên Sofa, nhắm nhẹ mắt để cảm nhận vùng vai gáy.",
+          "STEP 2: Hít vào nâng nhẹ hai vai lên sát tai (co cơ chủ động 30% lực) trong 4 giây.",
+          "STEP 3: Thở ra buông rơi hai vai xuống thật chậm trong 8 giây, cảm nhận cơ mềm nhũn ra."
+        ]
+      },
+      {
+        id: "lib_ps1",
+        category: "posture_sleep",
+        catName: "🌙 Cột Sống & Trước Khi Ngủ",
+        name: "Sphinx Pose (Tư Thế Nhân Sư Phục Hồi Đĩa Đệm Lưng)",
+        baseSets: 2,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 25,
+        type: "plank",
+        muscle: "Đường cong sinh lý Thắt lưng",
+        steps: [
+          "STEP 1: Nằm sấp trên thảm hoặc nệm cứng, chống hai cẳng tay vuông góc ngay dưới vai.",
+          "STEP 2: Nâng nhẹ lồng ngực lên, giữ bụng dưới và khung chậu áp sát mặt nệm.",
+          "STEP 3: Mắt nhìn thẳng, thả lỏng mông giúp trả lại đường cong tự nhiên cho cột sống sau 1 ngày ngồi gù."
+        ]
+      },
+      {
+        id: "lib_ps2",
+        category: "posture_sleep",
+        catName: "🌙 Cột Sống & Trước Khi Ngủ",
+        name: "Reclined Butterfly (Bướm Nằm Thư Giãn Sâu Trước Giấc Ngủ)",
+        baseSets: 1,
+        repsText: "90 giây",
+        workSec: 90,
+        rest: 15,
+        type: "plank",
+        muscle: "Mở Khớp háng & Dễ đi vào giấc ngủ",
+        steps: [
+          "STEP 1: Nằm ngửa trên giường trước khi ngủ, áp hai lòng bàn chân chạm vào nhau.",
+          "STEP 2: Để hai đầu gối mở sang hai bên rơi tự nhiên xuống nệm.",
+          "STEP 3: Hít vào 4 giây - Giữ 4 giây - Thở ra 6 giây để đưa nhịp tim về trạng thái ngủ sâu."
+        ]
+      }
+    ];
+
+    // 5. GIÁO ÁN NGOÀI TRỜI (CÔNG VIÊN)
+    const OUTDOOR_MODES = {
+      walk: {
+        title: "🌳 Đi Bộ Nhanh Công Viên & Mở Khớp Văn Phòng",
+        duration: "35 phút ngoài trời",
+        focus: "Đốt mỡ bền bỉ, kích thích tuần hoàn thận đào thải axit uric, 0% áp lực khớp",
+        exercises: [
+          {
+            id: "ow1",
+            name: "Khởi động xoay khớp & Đi bộ thông thả",
+            baseSets: 1,
+            repsText: "5 phút",
+            workSec: 300,
+            rest: 30,
+            type: "walk",
+            muscle: "Khớp Cổ chân, Gối & Hông",
+            steps: [
+              "STEP 1: Xoay kỹ cổ chân, khớp gối, khớp hông và xoay mở bả vai 1 phút.",
+              "STEP 2: Bắt đầu đi bộ thong thả 4 phút, mắt nhìn thẳng, thả lỏng vai gáy.",
+              "STEP 3: Hít sâu bằng mũi 3 bước, thở ra bằng miệng 3 bước."
+            ]
+          },
+          {
+            id: "ow2",
+            name: "Đi Bộ Nhanh Đánh Tay (Brisk Power Walk)",
+            baseSets: 4,
+            repsText: "5 phút / hiệp",
+            workSec: 300,
+            rest: 60,
+            type: "walk",
+            muscle: "Tim mạch, Đùi & Bắp chân",
+            steps: [
+              "STEP 1: Giữ lưng thẳng tự nhiên, siết nhẹ cơ bụng, mắt nhìn về phía trước 10m.",
+              "STEP 2: Bước sải chân vừa phải, gập khuỷu tay 90 độ đánh mạnh từ trước ra sau.",
+              "STEP 3: Tiếp đất bằng gót chân rồi lăn mềm mại lên mũi chân."
+            ]
+          },
+          {
+            id: "ow3",
+            name: "Chống Đẩy Tựa Ghế Đá / Lan Can Công Viên",
+            baseSets: 3,
+            repsText: "12 lần",
+            workSec: 45,
+            rest: 45,
+            type: "pushup",
+            muscle: "Ngực, Vai & Chống gù lưng",
+            steps: [
+              "STEP 1: Đặt hai tay rộng hơn vai lên tựa lưng ghế đá hoặc thanh chắn công viên.",
+              "STEP 2: Hạ ngực tiến sát về phía ghế đá, giữ lưng - mông - gót chân thẳng tắp.",
+              "STEP 3: Thở ra đẩy mạnh người lên."
+            ]
+          }
+        ]
+      },
+      jog: {
+        title: "🏃 Chạy Bộ Chậm Ngắt Quãng (Jeffing Êm Khớp)",
+        duration: "35 phút ngoài trời",
+        focus: "Chạy chậm 2 phút xen kẽ Đi bộ 1 phút: Đốt mỡ cao mà không làm tăng axit uric",
+        exercises: [
+          {
+            id: "oj1",
+            name: "Khởi động Đi bộ nhanh & Nâng cao đùi nhẹ",
+            baseSets: 1,
+            repsText: "5 phút",
+            workSec: 300,
+            rest: 30,
+            type: "walk",
+            muscle: "Làm nóng Khớp gối & Cổ chân",
+            steps: [
+              "STEP 1: Xoay kỹ cổ chân, khớp gối, ép dọc - ép ngang làm nóng dịch khớp.",
+              "STEP 2: Đi bộ nhanh tăng dần nhịp tim trong 4 phút.",
+              "STEP 3: Tuyệt đối không chạy bứt tốc ngay khi cơ khớp còn nguội."
+            ]
+          },
+          {
+            id: "oj2",
+            name: "Tổ Hợp Jeffing: 2 Phút Chạy Chậm + 1 Phút Đi Bộ",
+            baseSets: 6,
+            repsText: "2p Chạy / 1p Đi bộ",
+            workSec: 120,
+            rest: 60,
+            type: "run",
+            muscle: "Đốt mỡ Toàn thân & Tim phổi",
+            steps: [
+              "STEP 1: Giữ thân người hơi đổ nhẹ về trước, bước chân ngắn giảm chấn động gối.",
+              "STEP 2: Chạy chậm (Slow Jogging) trong 2 phút ở ngưỡng nhịp tim vừa phải.",
+              "STEP 3: Khi đồng hồ báo nghỉ 60 giây, chuyển sang đi bộ chậm hít thở sâu."
+            ]
+          }
+        ]
+      }
+    };
+
+    // 6. LỊCH TẬP 7 NGÀY TRONG NHÀ
+    const WORKOUT_PLAN = [
+      {
+        day: "Thứ 2",
+        title: "Thân Trên & Mở Ngực Văn Phòng",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Chống gù lưng, khỏe vai - ngực - tay sau",
+        exercises: [
+          {
+            id: "m1",
+            name: "Incline Push-up (Chống đẩy điểm tựa)",
+            baseSets: 3,
+            repsText: "12 lần",
+            workSec: 45,
+            rest: 45,
+            type: "pushup",
+            muscle: "Ngực & Tay sau",
+            steps: [
+              "STEP 1: Chống tay lên mép bàn/ghế chắc chắn hoặc sàn, giữ lưng - mông thẳng.",
+              "STEP 2: Hạ ngực chậm rãi về phía trước (mũi tên đỏ), khép khuỷu tay 45 độ.",
+              "STEP 3: Thở ra, dùng cơ ngực đẩy mạnh thân người lên (mũi tên xanh)."
+            ],
+            alt: {
+              name: "Wall Push-up (Chống đẩy tường êm khớp vai)",
+              repsText: "15 lần",
+              steps: [
+                "STEP 1: Đứng cách tường 1 sải tay, đặt hai bàn tay ngang tầm ngực lên tường.",
+                "STEP 2: Gập khuỷu tay hạ người sát tường nhẹ nhàng, giữ trục lưng thẳng.",
+                "STEP 3: Đẩy người trở lại vị trí ban đầu, rất êm cho cổ tay và khớp vai."
+              ]
+            }
+          },
+          {
+            id: "m2",
+            name: "Pike Push-up (Đẩy vai chữ V)",
+            baseSets: 3,
+            repsText: "10 lần",
+            workSec: 40,
+            rest: 60,
+            type: "pike",
+            muscle: "Cơ Vai & Lưng trên",
+            steps: [
+              "STEP 1: Đẩy hông lên cao tạo hình chữ V ngược (đường góc đỏ), gót chân hơi nhón.",
+              "STEP 2: Gập khuỷu tay, hạ đỉnh đầu xuống hướng về phía trước hai bàn tay.",
+              "STEP 3: Đẩy ngược thân trên về lại vị trí chữ V ban đầu."
+            ],
+            alt: {
+              name: "Wall Angel Press (Trượt tay dựa tường mở khớp vai)",
+              repsText: "45 giây",
+              steps: [
+                "STEP 1: Đứng dựa lưng vào tường, giơ 2 tay tạo góc 90 độ áp sát tường.",
+                "STEP 2: Trượt 2 tay lên cao qua đầu siết cơ vai và lưng trên.",
+                "STEP 3: Hạ xuống ép sát hai bả vai giúp mở lồng ngực."
+              ]
+            }
+          },
+          {
+            id: "m3",
+            name: "Plank Giữ Thăng Bằng Cột Sống",
+            baseSets: 3,
+            repsText: "40 giây",
+            workSec: 40,
+            rest: 45,
+            type: "plank",
+            muscle: "Lõi Core & Thắt lưng",
+            steps: [
+              "STEP 1: Chống cẳng tay vuông góc mặt sàn, giữ trục lưng song song đường kẻ đỏ.",
+              "STEP 2: Siết chặt cơ bụng và cơ mông kéo rốn hướng lên, không võng lưng.",
+              "STEP 3: Hít thở đều đặn suốt 40 giây."
+            ],
+            alt: {
+              name: "Knee Plank (Plank hạ gối giảm tải lưng dưới)",
+              repsText: "45 giây",
+              steps: [
+                "STEP 1: Chống hai cẳng tay và đặt hai đầu gối chạm thảm êm.",
+                "STEP 2: Giữ từ vai - lưng - gối thành một đường thẳng, siết nhẹ cơ bụng.",
+                "STEP 3: Duy trì nhịp thở đều, hoàn toàn không gây mỏi thắt lưng."
+              ]
+            }
+          }
+        ]
+      },
+      {
+        day: "Thứ 3",
+        title: "Thân Dưới & Wall Pilates Êm Khớp",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Kích hoạt cơ mông - đùi bị ỳ do ngồi ghế lâu",
+        exercises: [
+          {
+            id: "tu1",
+            name: "Bodyweight Squat (Squat chuẩn)",
+            baseSets: 4,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi trước & Mông",
+            steps: [
+              "STEP 1: Đứng hai chân rộng bằng vai, mũi chân mở nhẹ 15 độ, lưng thẳng.",
+              "STEP 2: Đẩy hông ra sau và hạ xuống như ngồi ghế, đùi song song sàn.",
+              "STEP 3: Dồn lực vào gót chân, siết mông đẩy thẳng người đứng lên."
+            ],
+            alt: {
+              name: "Chair Box Squat (Squat chạm ghế an toàn gối)",
+              repsText: "12 lần",
+              steps: [
+                "STEP 1: Đứng trước một chiếc ghế chắc chắn, hai chân rộng bằng vai.",
+                "STEP 2: Hạ hông lùi ra sau cho tới khi mông chạm nhẹ mặt ghế.",
+                "STEP 3: Đứng thẳng dậy bằng lực gót chân, bảo vệ tuyệt đối khớp gối."
+              ]
+            }
+          },
+          {
+            id: "tu2",
+            name: "Wall Glute Bridge (Cầu mông đạp tường Pilates)",
+            baseSets: 3,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "wall",
+            muscle: "Cơ Mông & Đùi sau",
+            steps: [
+              "STEP 1: Nằm ngửa, đặt hai bàn chân áp lên tường sao cho gối vuông góc 90 độ.",
+              "STEP 2: Siết cơ mông đẩy cao hông lên cho tới khi gối - hông - vai thẳng hàng.",
+              "STEP 3: Giữ 2 giây ở đỉnh rồi hạ hông chậm rãi xuống sàn."
+            ]
+          },
+          {
+            id: "tu3",
+            name: "Reverse Lunge (Chùng chân bước lùi)",
+            baseSets: 3,
+            repsText: "10 lần/chân",
+            workSec: 45,
+            rest: 60,
+            type: "squat",
+            muscle: "Đùi & Khớp hông",
+            steps: [
+              "STEP 1: Đứng thẳng tự nhiên, mắt nhìn thẳng, tay chống hông.",
+              "STEP 2: Bước lùi 1 chân ra sau, hạ gối tạo góc 90 độ.",
+              "STEP 3: Đạp gót chân trước đứng dậy về vị trí ban đầu rồi đổi chân."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 4",
+        title: "Nghỉ Phục Hồi: Chair Yoga & Somatic",
+        duration: "20 phút giãn cơ",
+        isRest: true,
+        focus: "Giãn cơ cột sống trên ghế/sofa, uống nước đào thải tinh thể urat",
+        exercises: [
+          {
+            id: "w1",
+            name: "Chair Cat-Cow & Chest Opener (Mở ngực trên ghế)",
+            baseSets: 3,
+            repsText: "60 giây",
+            workSec: 60,
+            rest: 20,
+            type: "chair",
+            muscle: "Toàn bộ Cột sống",
+            steps: [
+              "STEP 1: Ngồi thẳng trên ghế, hai bàn chân đặt phẳng trên sàn.",
+              "STEP 2: Hít vào ưỡn ngực, kéo hai bả vai ra sau nhìn chếch lên.",
+              "STEP 3: Thở ra cuộn tròn lưng ra sau để kéo giãn từng đốt sống."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 5",
+        title: "Cardio Nhẹ Nhàng & Đốt Mỡ Cơ Bụng",
+        duration: "40 phút",
+        isRest: false,
+        focus: "Tăng nhịp tim an toàn, giảm mỡ nội tạng",
+        exercises: [
+          {
+            id: "th1",
+            name: "Slow Mountain Climber (Leo núi chậm)",
+            baseSets: 3,
+            repsText: "40 giây",
+            workSec: 40,
+            rest: 45,
+            type: "pike",
+            muscle: "Cơ Bụng dưới & Vai",
+            steps: [
+              "STEP 1: Vào tư thế chống đẩy cao tay, giữ thân người thẳng căng.",
+              "STEP 2: Kéo gối phải về sát ngực một cách có kiểm soát, không nhấp nhô hông.",
+              "STEP 3: Đưa chân phải về và đổi sang kéo gối trái nhịp nhàng."
+            ]
+          },
+          {
+            id: "th2",
+            name: "Bird-Dog (Cân bằng Lưng - Bụng)",
+            baseSets: 3,
+            repsText: "12 lần",
+            workSec: 45,
+            rest: 45,
+            type: "plank",
+            muscle: "Cơ Lưng sâu & Bụng",
+            steps: [
+              "STEP 1: Chống tay và gối trên sàn, giữ lưng phẳng tự nhiên.",
+              "STEP 2: Duỗi thẳng tay phải về trước đồng thời đá thẳng chân trái ra sau.",
+              "STEP 3: Giữ 2 giây trên một trục thẳng rồi thu về đổi bên."
+            ]
+          },
+          {
+            id: "th3",
+            name: "High Knee March (Đi bộ nâng cao đùi tại chỗ)",
+            baseSets: 4,
+            repsText: "45 giây",
+            workSec: 45,
+            rest: 30,
+            type: "walk",
+            muscle: "Tim mạch & Đùi",
+            steps: [
+              "STEP 1: Đứng thẳng, siết nhẹ cơ bụng.",
+              "STEP 2: Nâng cao đùi trái vuông góc với bụng, đánh tay phải nhịp nhàng.",
+              "STEP 3: Hạ chân êm ái xuống sàn (không nhảy dậm mạnh) và đổi bên."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 6",
+        title: "Sức Bền Toàn Thân (Full-Body Flow)",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Phối hợp các nhóm cơ lớn, tăng trao đổi chất",
+        exercises: [
+          {
+            id: "f1",
+            name: "Squat to Calf Raise (Squat nhón bắp chân)",
+            baseSets: 3,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi & Bắp chuối",
+            steps: [
+              "STEP 1: Đứng rộng bằng vai chuẩn bị tư thế Squat.",
+              "STEP 2: Hạ hông xuống sâu vừa phải, giữ lưng thẳng.",
+              "STEP 3: Đứng thẳng dậy kết hợp nhón cao gót chân giúp bơm máu về tim."
+            ]
+          },
+          {
+            id: "f2",
+            name: "Push-up to Downward Dog (Chống đẩy giãn vai)",
+            baseSets: 3,
+            repsText: "10 lần",
+            workSec: 45,
+            rest: 60,
+            type: "pike",
+            muscle: "Ngực, Vai & Gân kheo",
+            steps: [
+              "STEP 1: Bắt đầu ở tư thế Plank cao tay.",
+              "STEP 2: Thực hiện 1 nhịp hạ ngực chống đẩy chuẩn form.",
+              "STEP 3: Khi đẩy lên, đẩy luôn hông lên cao thành chữ V ngược để ép giãn bả vai."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 7",
+        title: "Wall Pilates & Linh Hoạt Cuối Tuần",
+        duration: "30 phút",
+        isRest: false,
+        focus: "Mở khớp hông, vai và đốt calo nhẹ nhàng cùng tường",
+        exercises: [
+          {
+            id: "sa1",
+            name: "Sumo Squat (Squat chân rộng mở khớp hông)",
+            baseSets: 3,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi trong & Hông",
+            steps: [
+              "STEP 1: Đứng hai chân rộng gấp rưỡi vai, mũi chân xoay chếch ra ngoài 45 độ.",
+              "STEP 2: Hạ thẳng hông xuống, mở rộng hai đầu gối theo hướng mũi chân.",
+              "STEP 3: Đẩy người đứng thẳng lên, siết cơ đùi trong và mông."
+            ]
+          },
+          {
+            id: "sa2",
+            name: "Wall Roll-Down & Angel (Trượt tường mở vai)",
+            baseSets: 3,
+            repsText: "45 giây",
+            workSec: 45,
+            rest: 40,
+            type: "wall",
+            muscle: "Chống gù & Mở ngực",
+            steps: [
+              "STEP 1: Đứng dựa lưng và đầu sát tường.",
+              "STEP 2: Áp hai cánh tay chữ W lên tường rồi trượt lên chữ Y.",
+              "STEP 3: Kéo khuỷu tay xuống siết nhẹ cơ lưng giữa."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Chủ Nhật",
+        title: "Nghỉ Ngơi Hoàn Toàn & Sofa Yoga",
+        duration: "Nghỉ ngơi",
+        isRest: true,
+        focus: "Ngủ sâu, gác chân thư giãn tĩnh mạch, chuẩn bị tuần mới",
+        exercises: [
+          {
+            id: "su1",
+            name: "Gác Chân Lên Sofa & Hít Thở Sâu",
+            baseSets: 1,
+            repsText: "10 phút",
+            workSec: 120,
+            rest: 30,
+            type: "wall",
+            muscle: "Tuần hoàn máu & Thư giãn",
+            steps: [
+              "STEP 1: Nằm ngửa trên thảm, gác hai bắp chân lên mặt ghế Sofa.",
+              "STEP 2: Kết hợp hít sâu bằng mũi 4 giây, thở ra bằng miệng 6 giây.",
+              "STEP 3: Uống nước lọc ấm rải rác trong ngày."
+            ]
+          }
+        ]
+      }
+    ];
+
+    // 7. HỆ SINH THÁI DINH DƯỠNG ĐA CHẾ ĐỘ (LOW-PURINE / ĐỊA TRUNG HẢI / ĂN CHAY ĐỦ ĐẠM)
+    const DIET_MODES = {
+      low_purine: {
+        name: "🛡️ Kiểm Soát Axit Uric (Chuẩn)",
+        targetCal: 1850,
+        targetProtein: 85,
+        desc: "Ưu tiên Trứng, Sữa tách béo, Đậu phụ, Ức gà chần bỏ nước đầu (<120mg Purin/ngày)."
+      },
+      mediterranean: {
+        name: "🫒 Địa Trung Hải (Tốt Tim Mạch)",
+        targetCal: 1900,
+        targetProtein: 88,
+        desc: "Giàu dầu Oliu, Quả bơ, Hạt óc chó, Sữa chua Hy Lạp, Cá thịt trắng hấp và Rau xanh."
+      },
+      vegetarian: {
+        name: "🌱 Thực Vật + Trứng Sữa (0% Thịt)",
+        targetCal: 1800,
+        targetProtein: 80,
+        desc: "Đạm sạch 100% từ Trứng gà, Đậu phụ, Đậu gà, Sữa hạt, Yến mạch — Cực kỳ tốt để hạ nhanh Axit Uric."
+      }
+    };
+
+    const MEAL_PLAN = [
+      {
+        day: "Thứ 2",
+        breakfast: "2 quả trứng gà luộc + 1 lát bánh mì đen + 1 quả chuối (380 kcal • 18g Đạm)",
+        lunch: "Cơm gạo lứt + 150g Đậu phụ sốt cà chua + Canh cải ngọt nấu trứng (550 kcal • 24g Đạm)",
+        snack: "1 hộp sữa chua Hy Lạp không đường + 15g hạt hạnh nhân (220 kcal • 14g Đạm)",
+        dinner: "90g Ức gà áp chảo (chần bỏ nước đầu) + Salad bắp cải dầu oliu (480 kcal • 28g Đạm)"
+      },
+      {
+        day: "Thứ 3",
+        breakfast: "Yến mạch nấu sữa tươi tách béo + 1 quả trứng ốp la + Táo đỏ (410 kcal • 19g Đạm)",
+        lunch: "Bún gạo lứt trộn + 100g Thịt thăn heo luộc (bỏ nước) + Dưa chuột (560 kcal • 26g Đạm)",
+        snack: "1 ly sữa đậu nành ít đường hoặc 200ml sữa tách béo (180 kcal • 10g Đạm)",
+        dinner: "2 bìa Đậu phụ non hấp trứng + Rau muống luộc chấm xì dầu (450 kcal • 22g Đạm)"
+      },
+      {
+        day: "Thứ 4",
+        breakfast: "Bánh mì nguyên cám kẹp trứng bác + Nước ép cần tây/táo (390 kcal • 17g Đạm)",
+        lunch: "Cơm trắng vừa phải + Trứng cuộn rong biển + Canh bí đao nấu lạc giã (540 kcal • 22g Đạm)",
+        snack: "1 nắm hạt óc chó + 1 quả cam tươi giàu Vitamin C (210 kcal • 8g Đạm)",
+        dinner: "90g Cá sông thịt trắng (rô phi/diêu hồng hấp gừng) + Bông cải xanh (470 kcal • 26g Đạm)"
+      },
+      {
+        day: "Thứ 5",
+        breakfast: "Khoai lang luộc + 2 quả trứng gà luộc + Sữa tươi tách béo (420 kcal • 21g Đạm)",
+        lunch: "Cơm gạo lứt + Đậu phụ sốt xì dầu + Cải thìa luộc (530 kcal • 20g Đạm)",
+        snack: "Sữa chua Hy Lạp trộn hạt chia và quả việt quất/dâu tây (200 kcal • 12g Đạm)",
+        dinner: "90g Ức gà xé trộn hành tây, rau răm, nước cốt chanh + Canh mướp (480 kcal • 27g Đạm)"
+      },
+      {
+        day: "Thứ 6",
+        breakfast: "Phở cuốn trứng & rau củ + Đậu phụ chiên nồi chiên không dầu (400 kcal • 18g Đạm)",
+        lunch: "Cơm + 100g Thịt thăn heo rang cháy cạnh nhẹ + Canh bầu nấu trứng (580 kcal • 27g Đạm)",
+        snack: "1 quả ổi hoặc 1 quả kiwi (giàu Vitamin C đào thải urat) (150 kcal • 4g Đạm)",
+        dinner: "Salad trứng gà luộc + Đậu gà (Chickpeas) + Khoai lang nướng (460 kcal • 22g Đạm)"
+      },
+      {
+        day: "Thứ 7",
+        breakfast: "Cháo yến mạch trứng gà hành hoa + 1 ly sữa hạt (390 kcal • 18g Đạm)",
+        lunch: "Miến trộn rau củ + 90g Ức gà áp chảo + Đậu phụ ki (550 kcal • 28g Đạm)",
+        snack: "Phô mai ít béo (2 miếng) + Hạt điều rang mộc (230 kcal • 12g Đạm)",
+        dinner: "Đậu phụ sốt cà chua + Củ cải trắng và cà rốt luộc (440 kcal • 19g Đạm)"
+      },
+      {
+        day: "Chủ Nhật",
+        breakfast: "2 quả trứng chần + Bánh mì đen bơ đậu phộng + Sữa tách béo (430 kcal • 22g Đạm)",
+        lunch: "Cơm gia đình: Trứng đúc đậu phụ + Cá quả hấp (80g) + Rau luộc (560 kcal • 26g Đạm)",
+        snack: "Nước ép anh đào (Cherry) hoặc nước chanh pha loãng ít đường (140 kcal • 3g Đạm)",
+        dinner: "Súp bí đỏ sữa tươi tách béo + Salad trứng luộc nhẹ bụng (420 kcal • 18g Đạm)"
+      }
+    ];
+
+    const PURINE_DB = [
+      { name: "Trứng gà, trứng vịt", level: "green", mg: "~1-5 mg/100g", tip: "Ăn thoải mái (1-2 quả/ngày), nguồn đạm số 1 không lo tăng axit uric." },
+      { name: "Sữa tươi tách béo / Sữa chua Hy Lạp", level: "green", mg: "0 mg/100g", tip: "Ăn thoải mái! Protein trong sữa còn giúp thận tăng đào thải axit uric." },
+      { name: "Đậu phụ (Đậu hũ) / Sữa đậu nành", level: "green", mg: "~20-35 mg/100g", tip: "Đạm thực vật rất lành tính, dùng thay thế thịt đỏ hàng ngày." },
+      { name: "Các loại hạt (Hạnh nhân, óc chó, hạt điều)", level: "green", mg: "~25-37 mg/100g", tip: "Nguồn đạm và chất béo tốt cho bữa phụ văn phòng." },
+      { name: "Quả Anh đào (Cherry), Cam, Ổi, Kiwi", level: "green", mg: "<15 mg/100g", tip: "Giàu Vitamin C và chất chống viêm giúp hạ nồng độ axit uric máu." },
+      { name: "Ức gà (bỏ da)", level: "yellow", mg: "~130-140 mg/100g", tip: "Ăn vừa phải (80-100g/bữa). Mẹo: Chần/luộc bỏ nước đầu sẽ giảm mạnh purin." },
+      { name: "Thịt thăn heo (Lợn nạc)", level: "yellow", mg: "~120-140 mg/100g", tip: "Ăn tối đa 80-100g/bữa, ưu tiên luộc bỏ nước thay vì hầm." },
+      { name: "Cá sông thịt trắng (Rô phi, diêu hồng, trắm)", level: "yellow", mg: "~95-110 mg/100g", tip: "An toàn hơn cá biển, nên hấp gừng hoặc áp chảo (80-100g)." },
+      { name: "Thịt bò, Thịt dê, Hải sản có vỏ, Nội tạng", level: "red", mg: "200-800 mg/100g", tip: "Cần tránh! Lượng purin rất cao dễ gây lắng đọng tinh thể urat." },
+      { name: "Nước hầm xương, Nước lèo phở bò, Bia rượu", level: "red", mg: "Rất cao", tip: "Tuyệt đối tránh húp nước hầm xương/nước lẩu và bia rượu." }
+    ];
+
+    function App() {
+      const [activeTab, setActiveTab] = useState("workout"); // "workout" | "library" | "diet" | "office"
+      const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+      const [liveModeMap, setLiveModeMap] = useState({});
+      const [swappedMap, setSwappedMap] = useState({});
+      const [jointSafeMode, setJointSafeMode] = useState(false);
+      const [voiceEnabled, setVoiceEnabled] = useState(true);
+      const [environmentMode, setEnvironmentMode] = useState("indoor");
+
+      // TÍNH NĂNG MỚI 1: Tự động gắn Khởi động đầu buổi & Giãn cơ cuối buổi
+      const [autoWarmupCooldown, setAutoWarmupCooldown] = useState(true);
+
+      // TÍNH NĂNG MỚI 2: Thư viện bài tập mở rộng & Tự thêm bài tập mới lưu vào máy
+      const [customLibrary, setCustomLibrary] = useState(() => {
+        try {
+          return JSON.parse(localStorage.getItem("fitflow_custom_lib_v4") || "[]");
+        } catch {
+          return [];
+        }
+      });
+      const [addedTodayExercises, setAddedTodayExercises] = useState([]);
+      const [libFilter, setLibFilter] = useState("all");
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [newExForm, setNewExForm] = useState({
+        name: "",
+        category: "wall_pilates",
+        muscle: "Toàn thân & Cột sống",
+        repsText: "12 lần",
+        workSec: 45,
+        type: "wall",
+        step1: "",
+        step2: "",
+        step3: ""
+      });
+
+      // TÍNH NĂNG MỚI 3: Hệ sinh thái Dinh dưỡng (Calo, Đạm, Chế độ ăn, Nhịn ăn gián đoạn 16:8)
+      const [dietStyle, setDietStyle] = useState("low_purine");
+      const [fastingActive, setFastingActive] = useState(false);
+      const [fastingSec, setFastingSec] = useState(16 * 3600); // 16 tiếng nhịn ăn gián đoạn
+      const [checkedMeals, setCheckedMeals] = useState({ b: true, l: true, s: false, d: false });
+
+      const [stats, setStats] = useState(() => {
+        try {
+          return JSON.parse(localStorage.getItem("fitflow_stats_v4") || '{"xp":150,"streak":3,"difficultyMod":0,"water":5,"doneIds":[]}');
+        } catch {
+          return { xp: 150, streak: 3, difficultyMod: 0, water: 5, doneIds: [] };
+        }
+      });
+
+      // Màn hình Guided Workout Player
+      const [playerOpen, setPlayerOpen] = useState(false);
+      const [playerExIdx, setPlayerExIdx] = useState(0);
+      const [playerPhase, setPlayerPhase] = useState("work");
+      const [playerSec, setPlayerSec] = useState(45);
+      const [playerPaused, setPlayerPaused] = useState(false);
+
+      // Tìm kiếm Purin
+      const [foodQuery, setFoodQuery] = useState("");
+      const [foodFilter, setFoodFilter] = useState("all");
+
+      // Đồng hồ nhanh & Đồng hồ văn phòng
+      const [timerSec, setTimerSec] = useState(0);
+      const [timerRunning, setTimerRunning] = useState(false);
+      const [timerLabel, setTimerLabel] = useState("Bấm giờ nhanh");
+      const [officeSec, setOfficeSec] = useState(2700);
+      const [officeRunning, setOfficeRunning] = useState(false);
+
+      useEffect(() => {
+        localStorage.setItem("fitflow_stats_v4", JSON.stringify(stats));
+      }, [stats]);
+
+      useEffect(() => {
+        localStorage.setItem("fitflow_custom_lib_v4", JSON.stringify(customLibrary));
+      }, [customLibrary]);
+
+      // Đếm ngược Nhịn ăn gián đoạn 16:8
+      useEffect(() => {
+        if (!fastingActive) return;
+        const id = setInterval(() => {
+          setFastingSec((s) => (s > 0 ? s - 1 : 0));
+        }, 1000);
+        return () => clearInterval(id);
+      }, [fastingActive]);
+
+      // Tổng hợp Thư viện bài tập (Mặc định + Người dùng tự thêm)
+      const allLibraryExercises = useMemo(() => {
+        return [...customLibrary, ...DEFAULT_LIBRARY];
+      }, [customLibrary]);
+
+      const filteredLibrary = useMemo(() => {
+        if (libFilter === "all") return allLibraryExercises;
+        return allLibraryExercises.filter((item) => item.category === libFilter);
+      }, [allLibraryExercises, libFilter]);
+
+      // Tổng hợp danh sách bài tập của ngày (Tự động chèn Khởi động + Bài chính + Bài thêm từ Thư viện + Giãn cơ)
+      const baseDayWorkout = WORKOUT_PLAN[selectedDayIdx];
+      const currentWorkout = useMemo(() => {
+        let coreList = [];
+        let baseInfo = baseDayWorkout;
+
+        if (environmentMode === "walk") {
+          baseInfo = { ...OUTDOOR_MODES.walk, day: baseDayWorkout.day, isRest: false };
+          coreList = [...OUTDOOR_MODES.walk.exercises];
+        } else if (environmentMode === "jog") {
+          baseInfo = { ...OUTDOOR_MODES.jog, day: baseDayWorkout.day, isRest: false };
+          coreList = [...OUTDOOR_MODES.jog.exercises];
+        } else {
+          coreList = [...baseDayWorkout.exercises];
+        }
+
+        const merged = [
+          ...(autoWarmupCooldown && environmentMode === "indoor" ? STANDARD_WARMUP : []),
+          ...coreList,
+          ...addedTodayExercises,
+          ...(autoWarmupCooldown ? STANDARD_COOLDOWN : [])
+        ];
+
+        return {
+          ...baseInfo,
+          exercises: merged
+        };
+      }, [environmentMode, baseDayWorkout, autoWarmupCooldown, addedTodayExercises]);
+
+      const currentMeal = MEAL_PLAN[selectedDayIdx];
+
+      // Tính toán Calo & Protein nạp vào theo bữa đã đánh dấu
+      const nutritionProgress = useMemo(() => {
+        let cal = 0;
+        let pro = 0;
+        if (checkedMeals.b) { cal += 400; pro += 19; }
+        if (checkedMeals.l) { cal += 550; pro += 25; }
+        if (checkedMeals.s) { cal += 200; pro += 12; }
+        if (checkedMeals.d) { cal += 470; pro += 26; }
+        return { cal, pro };
+      }, [checkedMeals]);
+
+      const addExerciseToToday = (ex) => {
+        const clone = {
+          ...ex,
+          id: `${ex.id}_today_${Date.now()}`,
+          phaseTag: "➕ THÊM TỪ THƯ VIỆN"
+        };
+        setAddedTodayExercises((prev) => [...prev, clone]);
+        speakVN(`Đã thêm ${ex.name} vào lịch tập hôm nay`, voiceEnabled);
+        setActiveTab("workout");
+      };
+
+      const handleCreateCustomExercise = (e) => {
+        e.preventDefault();
+        if (!newExForm.name.trim()) return;
+        const created = {
+          id: `custom_${Date.now()}`,
+          category: newExForm.category,
+          catName: "⭐ Bài Tập Của Tôi",
+          name: newExForm.name.trim(),
+          baseSets: 3,
+          repsText: newExForm.repsText || "12 lần",
+          workSec: Number(newExForm.workSec) || 45,
+          rest: 40,
+          type: newExForm.type,
+          muscle: newExForm.muscle || "Toàn thân",
+          steps: [
+            `STEP 1: ${newExForm.step1 || "Chuẩn bị tư thế thẳng lưng, hít sâu."}`,
+            `STEP 2: ${newExForm.step2 || "Thực hiện chuyển động chậm rãi có kiểm soát."}`,
+            `STEP 3: ${newExForm.step3 || "Thở ra và trở về vị trí ban đầu."}`
+          ]
+        };
+        setCustomLibrary((prev) => [created, ...prev]);
+        setShowAddModal(false);
+        setNewExForm({
+          name: "",
+          category: "wall_pilates",
+          muscle: "Toàn thân & Cột sống",
+          repsText: "12 lần",
+          workSec: 45,
+          type: "wall",
+          step1: "",
+          step2: "",
+          step3: ""
+        });
+        speakVN("Đã lưu bài tập mới vào thư viện", voiceEnabled);
+      };
+
+      const toggleJointSafe = () => {
+        const next = !jointSafeMode;
+        setJointSafeMode(next);
+        if (next) {
+          const newMap = {};
+          WORKOUT_PLAN.forEach((d) =>
+            d.exercises.forEach((ex) => {
+              if (ex.alt) newMap[ex.id] = true;
+            })
+          );
+          setSwappedMap(newMap);
+          speakVN("Đã bật chế độ êm khớp gối và lưng", voiceEnabled);
+        } else {
+          setSwappedMap({});
+        }
+      };
+
+      // Đồng hồ bấm giờ mini
+      useEffect(() => {
+        if (!timerRunning) return;
+        if (timerSec <= 0) {
+          setTimerRunning(false);
+          playBeep(1046, 350);
+          speakVN("Hết giờ nghỉ, tiếp tục hiệp tiếp theo", voiceEnabled);
+          return;
+        }
+        if (timerSec === 3 || timerSec === 2 || timerSec === 1) playBeep(660, 100);
+        const id = setInterval(() => setTimerSec((s) => s - 1), 1000);
+        return () => clearInterval(id);
+      }, [timerRunning, timerSec, voiceEnabled]);
+
+      // Đồng hồ văn phòng 45 phút
+      useEffect(() => {
+        if (!officeRunning) return;
+        if (officeSec <= 0) {
+          setOfficeRunning(false);
+          playBeep(880, 500);
+          speakVN("Đã ngồi làm việc 45 phút. Hãy đứng dậy vươn vai và uống một cốc nước lọc nhé!", voiceEnabled);
+          alert("🪑 Đã ngồi 45 phút! Hãy đứng dậy vươn vai 1 phút và uống nước đào thải axit uric nhé!");
+          setOfficeSec(2700);
+          return;
+        }
+        const id = setInterval(() => setOfficeSec((s) => s - 1), 1000);
+        return () => clearInterval(id);
+      }, [officeRunning, officeSec, voiceEnabled]);
+
+      // Logic chạy Guided Workout Player
+      const startGuidedSession = () => {
+        const firstEx = currentWorkout.exercises[0];
+        const useAlt = swappedMap[firstEx.id] && firstEx.alt;
+        const activeName = useAlt ? firstEx.alt.name : firstEx.name;
+        setPlayerExIdx(0);
+        setPlayerPhase("work");
+        setPlayerSec(firstEx.workSec || 45);
+        setPlayerPaused(false);
+        setPlayerOpen(true);
+        playBeep(880, 250);
+        speakVN(`Bắt đầu buổi tập chuẩn hóa. Phần một: ${activeName}`, voiceEnabled);
+      };
+
+      useEffect(() => {
+        if (!playerOpen || playerPaused || playerPhase === "finish") return;
+
+        if (playerSec <= 0) {
+          const exercises = currentWorkout.exercises;
+          const currEx = exercises[playerExIdx];
+
+          if (playerPhase === "work") {
+            setStats((prev) => ({
+              ...prev,
+              xp: prev.xp + 25,
+              doneIds: prev.doneIds.includes(currEx.id) ? prev.doneIds : [...prev.doneIds, currEx.id]
+            }));
+
+            if (playerExIdx + 1 < exercises.length) {
+              setPlayerPhase("rest");
+              setPlayerSec(currEx.rest || 30);
+              playBeep(660, 250);
+              speakVN(`Tốt lắm! Nghỉ hít thở ${currEx.rest || 30} giây`, voiceEnabled);
+            } else {
+              setPlayerPhase("finish");
+              playBeep(1046, 450);
+              speakVN("Chúc mừng bạn đã hoàn thành trọn vẹn từ khởi động đến giãn cơ!", voiceEnabled);
+            }
+          } else if (playerPhase === "rest") {
+            const nextIdx = playerExIdx + 1;
+            const nextEx = exercises[nextIdx];
+            const useAlt = swappedMap[nextEx.id] && nextEx.alt;
+            const nextName = useAlt ? nextEx.alt.name : nextEx.name;
+            setPlayerExIdx(nextIdx);
+            setPlayerPhase("work");
+            setPlayerSec(nextEx.workSec || 45);
+            playBeep(880, 250);
+            speakVN(`Tiếp theo: ${nextName}`, voiceEnabled);
+          }
+          return;
+        }
+
+        if (playerSec === 10 && playerPhase === "work") {
+          speakVN("Còn 10 giây cố lên!", voiceEnabled);
+        }
+        if (playerSec <= 3 && playerSec >= 1) {
+          playBeep(740, 90);
+        }
+
+        const timer = setInterval(() => setPlayerSec((s) => s - 1), 1000);
+        return () => clearInterval(timer);
+      }, [playerOpen, playerPaused, playerSec, playerPhase, playerExIdx, currentWorkout, swappedMap, voiceEnabled]);
+
+      const filteredFoods = useMemo(() => {
+        return PURINE_DB.filter((item) => {
+          const matchLevel = foodFilter === "all" || item.level === foodFilter;
+          const matchText = item.name.toLowerCase().includes(foodQuery.toLowerCase()) ||
+                            item.tip.toLowerCase().includes(foodQuery.toLowerCase());
+          return matchLevel && matchText;
+        });
+      }, [foodQuery, foodFilter]);
+
+      const formatTime = (totalSec) => {
+        const m = Math.floor(totalSec / 60);
+        const s = totalSec % 60;
+        return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      };
+
+      const formatHours = (totalSec) => {
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      };
+
+      const toggleDone = (id) => {
+        setStats((prev) => {
+          const exists = prev.doneIds.includes(id);
+          return {
+            ...prev,
+            xp: exists ? Math.max(0, prev.xp - 15) : prev.xp + 20,
+            doneIds: exists ? prev.doneIds.filter((i) => i !== id) : [...prev.doneIds, id]
+          };
+        });
+      };
+
+      const handleCoachFeedback = (delta, msg) => {
+        setStats((prev) => ({
+          ...prev,
+          xp: prev.xp + 50,
+          streak: prev.streak + 1,
+          difficultyMod: Math.max(-1, Math.min(2, prev.difficultyMod + delta))
+        }));
+        setPlayerOpen(false);
+        speakVN(msg, voiceEnabled);
+      };
+
+      const userLevel = Math.floor(stats.xp / 100) + 1;
+      const activeDietConfig = DIET_MODES[dietStyle];
+
+      return (
+        <div className="max-w-md mx-auto min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 pb-24">
+          {/* HEADER THÔNG MINH */}
+          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-3.5 py-2.5 safe-top">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-base font-extrabold text-sky-400">FitFlow v4.0</h1>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
+                    🔥 {stats.streak} Ngày
+                  </span>
+                  <span className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold">
+                    Lv.{userLevel} ({stats.xp} XP)
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Wall Pilates • Chair Yoga • Low-Purine
+                </p>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl">
+                <div className="text-right">
+                  <div className="text-[9px] text-slate-400 truncate max-w-[75px]">{timerLabel}</div>
+                  <div className="text-sm font-mono font-bold text-emerald-400">
+                    {formatTime(timerSec)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTimerRunning(!timerRunning)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold ${
+                    timerRunning ? "bg-rose-600 text-white" : "bg-sky-600 text-white"
+                  }`}
+                >
+                  {timerRunning ? "Dừng" : "Chạy"}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-0.5">
+              <button
+                onClick={() => setAutoWarmupCooldown(!autoWarmupCooldown)}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border shrink-0 font-semibold ${
+                  autoWarmupCooldown
+                    ? "bg-sky-950/90 text-sky-300 border-sky-600"
+                    : "bg-slate-800 text-slate-400 border-slate-700"
+                }`}
+              >
+                {autoWarmupCooldown ? "🔄 Khởi động & Giãn cơ: TỰ ĐỘNG" : "🔄 Khởi động & Giãn cơ: TẮT"}
+              </button>
+              <button
+                onClick={() => setVoiceEnabled(!voiceEnabled)}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border shrink-0 font-semibold ${
+                  voiceEnabled
+                    ? "bg-emerald-950/80 text-emerald-300 border-emerald-700"
+                    : "bg-slate-800 text-slate-400 border-slate-700"
+                }`}
+              >
+                {voiceEnabled ? "🔊 Giọng HLV: BẬT" : "🔇 Giọng HLV: TẮT"}
+              </button>
+              <button
+                onClick={toggleJointSafe}
+                className={`text-[11px] px-2.5 py-1 rounded-lg border shrink-0 font-semibold ${
+                  jointSafeMode
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                    : "bg-slate-800 text-slate-300 border-slate-700"
+                }`}
+              >
+                {jointSafeMode ? "🛡️ Êm Khớp: BẬT" : "🛡️ Êm Khớp"}
+              </button>
+            </div>
+          </header>
+
+          {/* Thanh chọn Thứ trong tuần */}
+          <div className="px-3 pt-2.5">
+            <div className="grid grid-cols-7 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              {WORKOUT_PLAN.map((d, idx) => {
+                const active = idx === selectedDayIdx;
+                return (
+                  <button
+                    key={d.day}
+                    onClick={() => setSelectedDayIdx(idx)}
+                    className={`py-1.5 rounded-lg text-center transition ${
+                      active
+                        ? "bg-sky-600 text-white font-bold shadow"
+                        : d.isRest
+                        ? "text-emerald-400 hover:bg-slate-800"
+                        : "text-slate-400 hover:bg-slate-800"
+                    }`}
+                  >
+                    <div className="text-[11px]">{d.day.replace("Thứ ", "T").replace("Chủ Nhật", "CN")}</div>
+                    <div className="text-[9px] opacity-80">{d.isRest ? "Nghỉ" : "Tập"}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* NỘI DUNG CHÍNH THEO 4 TAB */}
+          <main className="p-3 space-y-3.5 flex-1">
+            {/* TAB 1: LỊCH TẬP HÔM NAY */}
+            {activeTab === "workout" && (
+              <div className="space-y-3">
+                {/* Chuyển đổi Trong Nhà vs Công Viên */}
+                <div className="bg-slate-900 p-2 rounded-2xl border border-slate-800">
+                  <div className="flex items-center justify-between px-1 mb-1.5">
+                    <span className="text-[11px] font-bold text-emerald-400">
+                      🌤️ Chọn không gian tập hôm nay:
+                    </span>
+                    <button
+                      onClick={() => setActiveTab("library")}
+                      className="text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/40 px-2 py-0.5 rounded-full font-bold"
+                    >
+                      + Thêm bài từ Thư viện
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      onClick={() => setEnvironmentMode("indoor")}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 border ${
+                        environmentMode === "indoor"
+                          ? "bg-sky-600 text-white border-sky-400 shadow"
+                          : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      <span>🏠 Trong Nhà</span>
+                      <span className="text-[9px] opacity-80">Bodyweight & Wall</span>
+                    </button>
+                    <button
+                      onClick={() => setEnvironmentMode("walk")}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 border ${
+                        environmentMode === "walk"
+                          ? "bg-emerald-600 text-white border-emerald-400 shadow"
+                          : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      <span>🌳 Đi Bộ Công Viên</span>
+                      <span className="text-[9px] opacity-80">35p Đốt mỡ êm khớp</span>
+                    </button>
+                    <button
+                      onClick={() => setEnvironmentMode("jog")}
+                      className={`py-2 px-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 border ${
+                        environmentMode === "jog"
+                          ? "bg-amber-600 text-white border-amber-400 shadow"
+                          : "bg-slate-950 text-slate-400 border-slate-800"
+                      }`}
+                    >
+                      <span>🏃 Chạy Bộ Chậm</span>
+                      <span className="text-[9px] opacity-80">2p Chạy / 1p Đi bộ</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Banner Buổi tập */}
+                <div className="p-4 rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/60 border-slate-700/80 shadow-lg">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-sky-400 uppercase">
+                        {currentWorkout.day} • {currentWorkout.duration}
+                      </span>
+                      <h2 className="text-base font-extrabold mt-0.5">{currentWorkout.title}</h2>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold shrink-0">
+                      {currentWorkout.exercises.length} Động tác
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">🎯 {currentWorkout.focus}</p>
+
+                  <button
+                    onClick={startGuidedSession}
+                    className="mt-3 w-full py-2.5 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>▶️ BẮT ĐẦU BUỔI TẬP CHUẨN HÓA (KHỞI ĐỘNG ➔ TẬP ➔ GIÃN CƠ)</span>
+                  </button>
+                </div>
+
+                {/* Danh sách bài tập */}
+                {currentWorkout.exercises.map((ex) => {
+                  const isDone = stats.doneIds.includes(ex.id);
+                  const isLive = !!liveModeMap[ex.id];
+                  const isSwapped = !!swappedMap[ex.id] && !!ex.alt;
+                  const displayName = isSwapped ? ex.alt.name : ex.name;
+                  const displayReps = isSwapped ? ex.alt.repsText : ex.repsText;
+                  const displaySteps = isSwapped ? ex.alt.steps : ex.steps;
+                  const adjustedSets = Math.max(1, (ex.baseSets || 3) + stats.difficultyMod);
+
+                  return (
+                    <div
+                      key={ex.id}
+                      className={`p-3.5 rounded-2xl border transition ${
+                        isDone
+                          ? "bg-emerald-950/25 border-emerald-700/60"
+                          : "bg-slate-900 border-slate-800"
+                      }`}
+                    >
+                      {ex.phaseTag && (
+                        <div className="mb-1.5">
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            {ex.phaseTag}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div>
+                          <h3 className="font-bold text-sm text-white">{displayName}</h3>
+                          <p className="text-xs text-sky-400 font-semibold mt-0.5">
+                            {adjustedSets} hiệp × {displayReps} • Nghỉ {ex.rest}s
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={() => toggleDone(ex.id)}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold shrink-0 ${
+                            isDone
+                              ? "bg-emerald-600 text-white"
+                              : "bg-slate-800 text-slate-300 border border-slate-700"
+                          }`}
+                        >
+                          {isDone ? "✓ Xong" : "Hoàn thành"}
+                        </button>
+                      </div>
+
+                      <StepDiagram type={ex.type} isLive={isLive} muscleHighlight={ex.muscle} />
+
+                      <div className="mt-2 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
+                        {displaySteps.map((st, i) => (
+                          <p key={i} className="text-xs text-slate-300 leading-relaxed">
+                            {st}
+                          </p>
+                        ))}
+                      </div>
+
+                      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1.5">
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() =>
+                              setLiveModeMap((prev) => ({ ...prev, [ex.id]: !prev[ex.id] }))
+                            }
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-amber-300"
+                          >
+                            {isLive ? "🖼️ Xem 3 Bước" : "▶️ Ảnh động"}
+                          </button>
+
+                          {ex.alt && (
+                            <button
+                              onClick={() =>
+                                setSwappedMap((prev) => ({ ...prev, [ex.id]: !prev[ex.id] }))
+                              }
+                              className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-emerald-300"
+                            >
+                              🔄 {isSwapped ? "Về bài gốc" : "Đổi bài êm hơn"}
+                            </button>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setTimerSec(ex.workSec || 45);
+                            setTimerLabel(displayName);
+                            setTimerRunning(true);
+                            playBeep(660, 120);
+                          }}
+                          className="text-[11px] bg-sky-600/20 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-lg font-semibold"
+                        >
+                          ⏱️ Bấm giờ {formatTime(ex.workSec || 45)}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 2: THƯ VIỆN BÀI TẬP ĐA DẠNG (WALL PILATES, CHAIR YOGA, SOFA YOGA, TỰ THÊM BÀI MỚI) */}
+            {activeTab === "library" && (
+              <div className="space-y-3">
+                <div className="bg-gradient-to-r from-purple-950/70 to-slate-900 p-4 rounded-2xl border border-purple-700/50">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h2 className="text-base font-extrabold text-white">
+                        📚 Kho Bài Tập Low-Impact & Giãn Cơ
+                      </h2>
+                      <p className="text-xs text-slate-300 mt-0.5">
+                        Wall Pilates, Chair Yoga, Sofa Yoga, Cột sống & Giấc ngủ
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-extrabold shrink-0 shadow"
+                    >
+                      + Tạo Bài Mới
+                    </button>
+                  </div>
+
+                  {/* Bộ lọc chuyên mục */}
+                  <div className="flex gap-1.5 mt-3 overflow-x-auto pb-1 text-[11px]">
+                    <button
+                      onClick={() => setLibFilter("all")}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 ${
+                        libFilter === "all" ? "bg-sky-600 text-white" : "bg-slate-800 text-slate-300"
+                      }`}
+                    >
+                      Tất cả ({allLibraryExercises.length})
+                    </button>
+                    <button
+                      onClick={() => setLibFilter("wall_pilates")}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 ${
+                        libFilter === "wall_pilates" ? "bg-purple-600 text-white" : "bg-slate-800 text-purple-300"
+                      }`}
+                    >
+                      🧱 Wall Pilates
+                    </button>
+                    <button
+                      onClick={() => setLibFilter("chair_yoga")}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 ${
+                        libFilter === "chair_yoga" ? "bg-amber-600 text-white" : "bg-slate-800 text-amber-300"
+                      }`}
+                    >
+                      🪑 Chair Yoga
+                    </button>
+                    <button
+                      onClick={() => setLibFilter("sofa_somatic")}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 ${
+                        libFilter === "sofa_somatic" ? "bg-emerald-600 text-white" : "bg-slate-800 text-emerald-300"
+                      }`}
+                    >
+                      🛋️ Sofa & Somatic
+                    </button>
+                    <button
+                      onClick={() => setLibFilter("posture_sleep")}
+                      className={`px-2.5 py-1 rounded-lg font-bold shrink-0 ${
+                        libFilter === "posture_sleep" ? "bg-indigo-600 text-white" : "bg-slate-800 text-indigo-300"
+                      }`}
+                    >
+                      🌙 Lưng & Trước Ngủ
+                    </button>
+                  </div>
+                </div>
+
+                {/* Danh sách bài trong thư viện */}
+                {filteredLibrary.map((ex) => {
+                  const isLive = !!liveModeMap[ex.id];
+                  return (
+                    <div key={ex.id} className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div>
+                          <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded">
+                            {ex.catName}
+                          </span>
+                          <h3 className="font-bold text-sm text-white mt-1">{ex.name}</h3>
+                          <p className="text-xs text-sky-400 font-semibold">
+                            {ex.baseSets} hiệp × {ex.repsText}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => addExerciseToToday(ex)}
+                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold shrink-0"
+                        >
+                          + Đưa vào Hôm nay
+                        </button>
+                      </div>
+
+                      <StepDiagram type={ex.type} isLive={isLive} muscleHighlight={ex.muscle} />
+
+                      <div className="mt-2 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
+                        {ex.steps.map((st, i) => (
+                          <p key={i} className="text-xs text-slate-300 leading-relaxed">
+                            {st}
+                          </p>
+                        ))}
+                      </div>
+
+                      <div className="mt-2 flex justify-between items-center">
+                        <button
+                          onClick={() =>
+                            setLiveModeMap((prev) => ({ ...prev, [ex.id]: !prev[ex.id] }))
+                          }
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-amber-300"
+                        >
+                          {isLive ? "🖼️ Xem 3 Bước" : "▶️ Xem Ảnh động"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTimerSec(ex.workSec || 45);
+                            setTimerLabel(ex.name);
+                            setTimerRunning(true);
+                            playBeep(660, 120);
+                          }}
+                          className="text-[11px] bg-sky-600/20 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-lg font-semibold"
+                        >
+                          ⏱️ Tập thử {formatTime(ex.workSec || 45)}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 3: HỆ SINH THÁI DINH DƯỠNG TÍCH HỢP (CALO, PROTEIN, NHỊN ĂN GIÁN ĐOẠN, PURIN) */}
+            {activeTab === "diet" && (
+              <div className="space-y-3">
+                {/* 1. Bộ đếm Calo & Protein + Chế độ ăn */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-bold text-sm text-emerald-400">
+                      🥗 Hệ Sinh Thái Dinh Dưỡng & Chế Độ Ăn
+                    </h3>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+                      Low-Purine Safe
+                    </span>
+                  </div>
+
+                  {/* Chọn chế độ ăn */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {Object.entries(DIET_MODES).map(([key, cfg]) => (
+                      <button
+                        key={key}
+                        onClick={() => setDietStyle(key)}
+                        className={`p-2 rounded-xl text-[11px] font-bold border text-center ${
+                          dietStyle === key
+                            ? "bg-sky-600 text-white border-sky-400"
+                            : "bg-slate-950 text-slate-400 border-slate-800"
+                        }`}
+                      >
+                        {cfg.name}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-slate-300 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                    💡 {activeDietConfig.desc}
+                  </p>
+
+                  {/* Thanh tiến độ Calo & Đạm an toàn */}
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">🔥 Năng lượng:</span>
+                        <b className="text-amber-300">
+                          {nutritionProgress.cal} / {activeDietConfig.targetCal} kcal
+                        </b>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="bg-amber-400 h-full"
+                          style={{
+                            width: `${Math.min(100, (nutritionProgress.cal / activeDietConfig.targetCal) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-slate-400">🥚 Đạm sạch:</span>
+                        <b className="text-emerald-300">
+                          {nutritionProgress.pro} / {activeDietConfig.targetProtein}g
+                        </b>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                        <div
+                          className="bg-emerald-400 h-full"
+                          style={{
+                            width: `${Math.min(100, (nutritionProgress.pro / activeDietConfig.targetProtein) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Đồng hồ Nhịn Ăn Gián Đoạn 16:8 (Intermittent Fasting) */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-sm text-purple-400">
+                        ⏳ Nhịn Ăn Gián Đoạn 16:8 (Êm Dạ Dày & Thận)
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        Khung ăn gợi ý: 07:00 - 19:00 • Trong lúc nhịn luôn uống nhiều nước lọc!
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setFastingActive(!fastingActive)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold ${
+                        fastingActive ? "bg-rose-600 text-white" : "bg-purple-600 text-white"
+                      }`}
+                    >
+                      {fastingActive ? "Tạm dừng" : "Bắt đầu 16h"}
+                    </button>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+                    <span className="text-xs text-slate-300">Thời gian nhịn còn lại:</span>
+                    <span className="text-lg font-mono font-extrabold text-purple-300">
+                      {formatHours(fastingSec)}
+                    </span>
+                    <button
+                      onClick={() => { setFastingActive(false); setFastingSec(16 * 3600); }}
+                      className="text-[11px] text-slate-400 underline"
+                    >
+                      Đặt lại
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Bộ đếm uống nước đào thải Axit Uric */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-sm text-sky-400">💧 Nước lọc đào thải Axit Uric</h3>
+                      <p className="text-xs text-slate-400">Mục tiêu: 11 cốc (2.75 Lít/ngày)</p>
+                    </div>
+                    <span className="text-lg font-extrabold text-white">
+                      {stats.water} / 11 cốc
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="bg-sky-500 h-full transition-all"
+                      style={{ width: `${Math.min(100, (stats.water / 11) * 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => setStats((s) => ({ ...s, water: Math.max(0, s.water - 1) }))}
+                      className="px-3 py-2 bg-slate-800 rounded-xl text-xs font-bold"
+                    >
+                      -1
+                    </button>
+                    <button
+                      onClick={() => {
+                        setStats((s) => ({ ...s, water: s.water + 1, xp: s.xp + 5 }));
+                        playBeep(880, 100);
+                      }}
+                      className="flex-1 py-2 bg-sky-600 rounded-xl text-xs font-bold text-white"
+                    >
+                      + Uống 1 cốc 250ml (+5 XP)
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Thực đơn theo ngày (Có tích chọn để cộng Calo & Đạm) */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h3 className="font-bold text-sm text-emerald-400">
+                    🍱 Thực đơn {currentMeal.day} (Bấm chọn bữa đã ăn)
+                  </h3>
+                  <div className="text-xs space-y-2">
+                    {[
+                      { key: "b", label: "☀️ Sáng", text: currentMeal.breakfast, color: "text-amber-300" },
+                      { key: "l", label: "🍱 Trưa", text: currentMeal.lunch, color: "text-sky-300" },
+                      { key: "s", label: "🍎 Phụ 16h", text: currentMeal.snack, color: "text-purple-300" },
+                      { key: "d", label: "🌙 Tối", text: currentMeal.dinner, color: "text-emerald-300" }
+                    ].map((m) => (
+                      <div
+                        key={m.key}
+                        onClick={() =>
+                          setCheckedMeals((prev) => ({ ...prev, [m.key]: !prev[m.key] }))
+                        }
+                        className={`p-2.5 rounded-xl border cursor-pointer flex items-start justify-between gap-2 ${
+                          checkedMeals[m.key]
+                            ? "bg-emerald-950/30 border-emerald-700/60"
+                            : "bg-slate-950 border-slate-800"
+                        }`}
+                      >
+                        <div>
+                          <b className={m.color}>{m.label}: </b>
+                          <span className="text-slate-200">{m.text}</span>
+                        </div>
+                        <span className="text-xs font-bold text-emerald-400 shrink-0">
+                          {checkedMeals[m.key] ? "✓ Đã ăn" : "+ Chọn"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 5. Tra cứu nhanh Purin */}
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                  <h3 className="font-bold text-sm text-amber-400">
+                    🔎 Tra Cứu Nhanh Thực Phẩm Purin (Axit Uric)
+                  </h3>
+                  <input
+                    type="text"
+                    value={foodQuery}
+                    onChange={(e) => setFoodQuery(e.target.value)}
+                    placeholder="Nhập tên món (VD: trứng, đậu phụ, bò, ức gà, bia...)"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                  />
+                  <div className="max-h-52 overflow-y-auto space-y-2 pr-0.5">
+                    {filteredFoods.map((f, i) => (
+                      <div
+                        key={i}
+                        className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex flex-col gap-1"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-xs text-white">
+                            {f.level === "green" ? "🟢 " : f.level === "yellow" ? "🟡 " : "🔴 "}
+                            {f.name}
+                          </span>
+                          <span className="text-[10px] font-mono bg-slate-800 px-2 py-0.5 rounded text-slate-300">
+                            Purin: {f.mg}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400">{f.tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: VĂN PHÒNG & GIẤC NGỦ */}
+            {activeTab === "office" && (
+              <div className="space-y-3">
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 text-center">
+                  <h3 className="font-bold text-sm text-amber-400">
+                    🪑 Đồng Hồ Nhắc Đứng Dậy Văn Phòng (45 Phút)
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Cứ mỗi 45 phút ngồi làm việc, hãy đứng dậy 1-2 phút để giải phóng áp lực đĩa đệm.
+                  </p>
+                  <div className="text-4xl font-mono font-extrabold text-sky-400 my-3">
+                    {formatTime(officeSec)}
+                  </div>
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => setOfficeRunning(!officeRunning)}
+                      className="px-4 py-2 bg-sky-600 rounded-xl text-xs font-bold text-white"
+                    >
+                      {officeRunning ? "Tạm dừng" : "▶️ Bắt đầu phiên 45p"}
+                    </button>
+                    <button
+                      onClick={() => { setOfficeRunning(false); setOfficeSec(2700); }}
+                      className="px-3 py-2 bg-slate-800 rounded-xl text-xs text-slate-300"
+                    >
+                      Đặt lại 45p
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h3 className="font-bold text-sm text-emerald-400">
+                    😴 Lịch Ngủ & Hạ Axit Uric Tự Nhiên
+                  </h3>
+                  <div className="text-xs text-slate-300 space-y-2">
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="font-bold text-sky-300">06:00 - 06:30</span>
+                      <span>Dậy sớm uống 300ml nước ấm + Đi bộ công viên nếu trời đẹp</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="font-bold text-sky-300">12:30 - 12:50</span>
+                      <span>Ngủ trưa 20 phút tựa lưng ghế (không gục đầu lên bàn)</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="font-bold text-sky-300">17:45 - 18:25</span>
+                      <span>Tập Bodyweight / Wall Pilates 35 phút</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-emerald-300">22:30 - 23:00</span>
+                      <span>Tập 1 bài Giãn cơ trước khi ngủ & Ngủ sâu 7.5 tiếng</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* MODAL TỰ THÊM BÀI TẬP MỚI VÀO THƯ VIỆN */}
+          {showAddModal && (
+            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+              <form
+                onSubmit={handleCreateCustomExercise}
+                className="bg-slate-900 border border-slate-700 rounded-2xl p-4 w-full max-w-sm space-y-3"
+              >
+                <div className="flex justify-between items-center">
+                  <h3 className="font-extrabold text-sm text-sky-400">
+                    ➕ Thêm Bài Tập Mới Vào Thư Viện
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="text-xs text-slate-400"
+                  >
+                    ✕ Đóng
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Tên bài tập (VD: Wall Sit dựa tường)"
+                  value={newExForm.name}
+                  onChange={(e) => setNewExForm({ ...newExForm, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                />
+
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={newExForm.category}
+                    onChange={(e) => setNewExForm({ ...newExForm, category: e.target.value })}
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white"
+                  >
+                    <option value="wall_pilates">🧱 Wall Pilates</option>
+                    <option value="chair_yoga">🪑 Chair Yoga</option>
+                    <option value="sofa_somatic">🛋️ Sofa & Somatic</option>
+                    <option value="posture_sleep">🌙 Lưng & Giấc ngủ</option>
+                  </select>
+
+                  <select
+                    value={newExForm.type}
+                    onChange={(e) => setNewExForm({ ...newExForm, type: e.target.value })}
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-xs text-white"
+                  >
+                    <option value="wall">Hình mẫu: Tập Tường</option>
+                    <option value="chair">Hình mẫu: Tập Ghế</option>
+                    <option value="squat">Hình mẫu: Thân Dưới</option>
+                    <option value="pushup">Hình mẫu: Thân Trên</option>
+                    <option value="plank">Hình mẫu: Nằm / Plank</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Số lần (VD: 15 lần)"
+                    value={newExForm.repsText}
+                    onChange={(e) => setNewExForm({ ...newExForm, repsText: e.target.value })}
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nhóm cơ (VD: Đùi & Mông)"
+                    value={newExForm.muscle}
+                    onChange={(e) => setNewExForm({ ...newExForm, muscle: e.target.value })}
+                    className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                  />
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Hướng dẫn STEP 1 (Tư thế chuẩn bị)"
+                  value={newExForm.step1}
+                  onChange={(e) => setNewExForm({ ...newExForm, step1: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                />
+                <input
+                  type="text"
+                  placeholder="Hướng dẫn STEP 2 (Chuyển động chính)"
+                  value={newExForm.step2}
+                  onChange={(e) => setNewExForm({ ...newExForm, step2: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                />
+                <input
+                  type="text"
+                  placeholder="Hướng dẫn STEP 3 (Kết thúc & Hít thở)"
+                  value={newExForm.step3}
+                  onChange={(e) => setNewExForm({ ...newExForm, step3: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
+                />
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-sky-600 hover:bg-sky-500 rounded-xl text-xs font-extrabold text-white"
+                >
+                  Lưu Vào Thư Viện Máy
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* MÀN HÌNH GUIDED WORKOUT PLAYER TOÀN MÀN HÌNH */}
+          {playerOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
+              {playerPhase !== "finish" ? (
+                <>
+                  <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div>
+                      <span className="text-xs font-bold uppercase text-sky-400">
+                        {currentWorkout.exercises[playerExIdx].phaseTag || "🔥 BÀI TẬP CHÍNH"} • ({playerExIdx + 1}/{currentWorkout.exercises.length})
+                      </span>
+                      <h2 className="text-base font-extrabold text-white">
+                        {swappedMap[currentWorkout.exercises[playerExIdx].id] &&
+                        currentWorkout.exercises[playerExIdx].alt
+                          ? currentWorkout.exercises[playerExIdx].alt.name
+                          : currentWorkout.exercises[playerExIdx].name}
+                      </h2>
+                    </div>
+                    <button
+                      onClick={() => setPlayerOpen(false)}
+                      className="px-3 py-1.5 bg-slate-800 rounded-xl text-xs font-bold text-slate-300"
+                    >
+                      ✕ Thoát
+                    </button>
+                  </div>
+
+                  <div className="my-auto space-y-4 text-center">
+                    <span
+                      className={`inline-block px-4 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider ${
+                        playerPhase === "work"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                      }`}
+                    >
+                      {playerPhase === "work" ? "🔥 ĐANG THỰC HIỆN" : "💧 NGHỈ HÍT THỞ SÂU"}
+                    </span>
+
+                    <div className="text-6xl font-mono font-black text-white animate-ring">
+                      {formatTime(playerSec)}
+                    </div>
+
+                    <StepDiagram
+                      type={currentWorkout.exercises[playerExIdx].type}
+                      isLive={true}
+                      muscleHighlight={currentWorkout.exercises[playerExIdx].muscle}
+                    />
+
+                    <div className="bg-slate-900 p-3 rounded-2xl border border-slate-800 text-left space-y-1">
+                      {(swappedMap[currentWorkout.exercises[playerExIdx].id] &&
+                      currentWorkout.exercises[playerExIdx].alt
+                        ? currentWorkout.exercises[playerExIdx].alt.steps
+                        : currentWorkout.exercises[playerExIdx].steps
+                      ).map((st, idx) => (
+                        <p key={idx} className="text-xs text-slate-300">
+                          {st}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-800">
+                    <button
+                      onClick={() => setPlayerSec((s) => s + 20)}
+                      className="py-3 bg-slate-800 rounded-xl text-xs font-bold text-slate-200"
+                    >
+                      +20 Giây
+                    </button>
+                    <button
+                      onClick={() => setPlayerPaused(!playerPaused)}
+                      className="py-3 bg-sky-600 rounded-xl text-xs font-extrabold text-white"
+                    >
+                      {playerPaused ? "▶️ Tiếp tục" : "⏸️ Tạm dừng"}
+                    </button>
+                    <button
+                      onClick={() => setPlayerSec(0)}
+                      className="py-3 bg-emerald-600 rounded-xl text-xs font-extrabold text-white"
+                    >
+                      Qua bài ⏭️
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="my-auto text-center space-y-4 p-2">
+                  <div className="text-5xl">🏆</div>
+                  <h2 className="text-xl font-extrabold text-emerald-400">
+                    Hoàn Thành Chuỗi Tập Chuẩn Hóa!
+                  </h2>
+                  <p className="text-xs text-slate-300">
+                    AI Coach hỏi: Hôm nay cơ thể và các khớp của bạn cảm thấy thế nào?
+                  </p>
+                  <div className="space-y-2.5 pt-2">
+                    <button
+                      onClick={() =>
+                        handleCoachFeedback(1, "Tuyệt vời! Đã cộng 50 XP và tăng chuỗi Streak của bạn.")
+                      }
+                      className="w-full py-3 bg-emerald-600/20 border border-emerald-500/40 rounded-2xl text-xs font-bold text-emerald-300"
+                    >
+                      💪 Rất sảng khoái, còn dư sức (+50 XP)
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleCoachFeedback(0, "Rất chuẩn! Hãy uống ngay 1 cốc nước lọc nhé.")
+                      }
+                      className="w-full py-3 bg-sky-600/20 border border-sky-500/40 rounded-2xl text-xs font-bold text-sky-300"
+                    >
+                      👌 Vừa sức, êm khớp (+50 XP)
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleCoachFeedback(-1, "Đã ghi nhận! Buổi sau AI sẽ giảm bớt hiệp để cơ thể phục hồi.")
+                      }
+                      className="w-full py-3 bg-amber-600/20 border border-amber-500/40 rounded-2xl text-xs font-bold text-amber-300"
+                    >
+                      😓 Hơi căng / Mỏi khớp (Buổi sau giảm nhẹ)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (4 TAB) */}
+          <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-bottom z-30">
+            <div className="max-w-md mx-auto grid grid-cols-4 p-1.5 gap-1">
+              <button
+                onClick={() => setActiveTab("workout")}
+                className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center ${
+                  activeTab === "workout" ? "bg-sky-600 text-white" : "text-slate-400"
+                }`}
+              >
+                <span>🏋️ Lịch Tập</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("library")}
+                className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center ${
+                  activeTab === "library" ? "bg-purple-600 text-white" : "text-slate-400"
+                }`}
+              >
+                <span>📚 Thư Viện</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("diet")}
+                className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center ${
+                  activeTab === "diet" ? "bg-sky-600 text-white" : "text-slate-400"
+                }`}
+              >
+                <span>🥗 Dinh Dưỡng</span>
+              </button>
+              <button
+                onClick={() => setActiveTab("office")}
+                className={`py-2 rounded-xl text-[11px] font-bold flex flex-col items-center ${
+                  activeTab === "office" ? "bg-sky-600 text-white" : "text-slate-400"
+                }`}
+              >
+                <span>🪑 Văn Phòng</span>
+              </button>
+            </div>
+          </nav>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
