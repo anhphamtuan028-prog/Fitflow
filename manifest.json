@@ -1,0 +1,25 @@
+{
+  "name": "FitFlow Pro Max v4.0",
+  "short_name": "FitFlow Pro",
+  "description": "Ứng dụng Tập Luyện, Wall Pilates & Dinh Dưỡng Kiểm Soát Axit Uric",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
