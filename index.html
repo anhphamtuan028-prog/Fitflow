@@ -8,9 +8,9 @@
   <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro Max v5.0 - 3D Mixamo Engine</title>
+  <title>FitFlow Pro Max v5.1 - 3D Mixamo Engine</title>
 
-  <!-- Kết nối Manifest & Service Worker PWA để cài đặt thành App thực thụ -->
+  <!-- Kết nối PWA App -->
   <link rel="manifest" href="./manifest.json" />
   <script>
     if ('serviceWorker' in navigator) {
@@ -22,9 +22,9 @@
 
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>⚡</text></svg>" />
 
-  <!-- Thư viện Three.js Core & GLTFLoader -->
+  <!-- Thư viện Three.js Core & GLTFLoader đồng bộ bản r128 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
 
   <!-- Tailwind CSS & React UI -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -59,7 +59,7 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // 1. ÂM THANH BÍP & GIỌNG ĐỌC HUẤN LUYỆN VIÊN TIẾNG VIỆT
+    // ÂM THANH BÍP & GIỌNG ĐỌC HUẤN LUYỆN VIÊN TIẾNG VIỆT
     const playBeep = (freq = 880, duration = 180, type = "sine") => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -86,15 +86,19 @@
       } catch (e) {}
     };
 
-    // 2. COMPONENT THREE.JS GLTF 3D VIEWER (NẠP FILE model.glb TỰ ĐỘNG CĂN GIỮA & XOAY 360 ĐỘ)
+    // COMPONENT THREE.JS GLTF 3D VIEWER (NẠP MODEL.GLB AN TOÀN & XOAY 360 ĐỘ)
     const ThreeGLTFViewer = ({ modelUrl = "./model.glb", height = 220 }) => {
       const containerRef = useRef(null);
-      const [loadError, setLoadError] = useState(false);
-      const [isLoading, setIsLoading] = useState(true);
+      const [status, setStatus] = useState("loading"); // "loading" | "ready" | "error"
+      const [errorDetail, setErrorDetail] = useState("");
 
       useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
+
+        let isMounted = true;
+        let mixer = null;
+        let reqId = null;
 
         const width = container.clientWidth || 340;
         const h = height;
@@ -103,43 +107,39 @@
         scene.background = new THREE.Color(0x0a1120);
 
         const camera = new THREE.PerspectiveCamera(45, width / h, 0.1, 100);
-        camera.position.set(0, 1.1, 3.4);
+        camera.position.set(0, 1.2, 3.2);
         camera.lookAt(0, 0, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
         renderer.setSize(width, h);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        scene.add(new THREE.AmbientLight(0xffffff, 0.85));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        keyLight.position.set(3, 5, 4);
-        scene.add(keyLight);
-
-        const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
-        fillLight.position.set(-3, 2, -2);
-        scene.add(fillLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(3, 5, 4);
+        scene.add(dirLight);
 
         const grid = new THREE.GridHelper(6, 12, 0x334155, 0x1e293b);
         grid.position.y = -0.95;
         scene.add(grid);
 
-        let mixer = null;
         const pivot = new THREE.Group();
-        pivot.position.set(0, 0, 0);
         scene.add(pivot);
 
-        let modelRef = null;
+        const initLoader = () => {
+          if (!window.THREE || !window.THREE.GLTFLoader) {
+            setTimeout(initLoader, 150);
+            return;
+          }
 
-        if (window.THREE && window.THREE.GLTFLoader) {
           const loader = new window.THREE.GLTFLoader();
           loader.load(
             modelUrl,
             (gltf) => {
+              if (!isMounted) return;
               const model = gltf.scene;
-              modelRef = model;
 
-              // Tự động căn giữa tâm và scale chuẩn tỷ lệ khung hình
               const box = new THREE.Box3().setFromObject(model);
               const size = box.getSize(new THREE.Vector3());
               const center = box.getCenter(new THREE.Vector3());
@@ -153,7 +153,7 @@
               model.position.z = -center.z * scale;
 
               pivot.add(model);
-              setIsLoading(false);
+              setStatus("ready");
 
               if (gltf.animations && gltf.animations.length > 0) {
                 mixer = new THREE.AnimationMixer(model);
@@ -163,17 +163,17 @@
             },
             undefined,
             (err) => {
-              console.warn("Chưa tìm thấy model.glb hoặc lỗi tải:", err);
-              setLoadError(true);
-              setIsLoading(false);
+              if (!isMounted) return;
+              console.error("Lỗi nạp GLB:", err);
+              setStatus("error");
+              setErrorDetail("Không thể nạp file ./model.glb (Hãy kiểm tra lại vị trí file)");
             }
           );
-        } else {
-          setLoadError(true);
-          setIsLoading(false);
-        }
+        };
 
-        // Tương tác chạm vuốt xoay 360 độ
+        initLoader();
+
+        // Xoay chạm vuốt 360 độ
         let isDragging = false;
         let prevX = 0, prevY = 0;
         let rotY = 0, rotX = 0;
@@ -183,23 +183,18 @@
           prevX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
           prevY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
         };
-
         const onMove = (e) => {
           if (!isDragging) return;
           const curX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
           const curY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-
           rotY += (curX - prevX) * 0.01;
           rotX += (curY - prevY) * 0.007;
           rotX = Math.max(-0.5, Math.min(0.6, rotX));
-
           pivot.rotation.y = rotY;
           pivot.rotation.x = rotX;
-
           prevX = curX;
           prevY = curY;
         };
-
         const onUp = () => { isDragging = false; };
 
         const dom = renderer.domElement;
@@ -211,8 +206,6 @@
         window.addEventListener("touchend", onUp);
 
         let clock = new THREE.Clock();
-        let reqId = null;
-
         const animate = () => {
           reqId = requestAnimationFrame(animate);
           const delta = clock.getDelta();
@@ -222,6 +215,7 @@
         animate();
 
         return () => {
+          isMounted = false;
           cancelAnimationFrame(reqId);
           dom.removeEventListener("mousedown", onDown);
           window.removeEventListener("mousemove", onMove);
@@ -234,26 +228,41 @@
         };
       }, [modelUrl, height]);
 
-      if (loadError) {
-        return null; // Tự động chuyển sang chế độ sơ đồ động STEP 1 - 2 - 3
-      }
-
       return (
-        <div className="relative w-full rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-2xl mb-2">
+        <div className="relative w-full rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-2xl mb-2.5">
           <div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
-          <div className="absolute top-2.5 left-2.5 pointer-events-none">
-            <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-md backdrop-blur">
-              {isLoading ? "⏳ Đang tải 3D..." : "🧍 Mixamo 3D Model"}
-            </span>
-          </div>
-          <div className="absolute bottom-2.5 right-2.5 pointer-events-none text-[9.5px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
-            👆 Vuốt xoay 360°
-          </div>
+
+          {status === "loading" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur pointer-events-none">
+              <div className="w-6 h-6 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+              <span className="text-xs text-sky-300 font-semibold">Đang nạp mô hình 3D...</span>
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 p-4 text-center">
+              <span className="text-lg mb-1">⚠️</span>
+              <p className="text-xs font-bold text-rose-400">{errorDetail}</p>
+            </div>
+          )}
+
+          {status === "ready" && (
+            <>
+              <div className="absolute top-2.5 left-2.5 pointer-events-none">
+                <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-md backdrop-blur">
+                  🧍 Mixamo 3D Active
+                </span>
+              </div>
+              <div className="absolute bottom-2.5 right-2.5 pointer-events-none text-[9.5px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
+                👆 Vuốt xoay 360°
+              </div>
+            </>
+          )}
         </div>
       );
     };
 
-    // 3. SƠ ĐỒ ĐỒ HỌA 3 BƯỚC DỰ PHÒNG CHÍNH XÁC (STEP 1 - STEP 2 - STEP 3)
+    // SƠ ĐỒ ĐỒ HỌA DỰ PHÒNG STEP 1-2-3
     const StepDiagram = ({ type, isLive, muscleHighlight }) => {
       const [liveStep, setLiveStep] = useState(0);
 
@@ -278,7 +287,6 @@
               <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
                 STEP {stepIndex + 1}
               </text>
-
               {stepIndex === 0 && (
                 <g>
                   <polyline points="35,45 95,12 165,42" fill="none" stroke="#ef4444" strokeWidth="3" />
@@ -328,7 +336,6 @@
               <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
                 STEP {stepIndex + 1}
               </text>
-
               {stepIndex === 0 && (
                 <g>
                   <line x1="90" y1="15" x2="90" y2="82" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="4" />
@@ -415,7 +422,7 @@
       );
     };
 
-    // 4. GÓI KHỞI ĐỘNG & GIÃN CƠ CHUẨN HÓA
+    // KHỞI ĐỘNG & GIÃN CƠ
     const STANDARD_WARMUP = [
       {
         id: "wu_auto_1",
@@ -454,7 +461,7 @@
       }
     ];
 
-    // 5. CƠ SỞ DỮ LIỆU LỊCH TẬP 7 NGÀY
+    // LỊCH TẬP 7 NGÀY
     const WORKOUT_PLAN = [
       {
         day: "Thứ 2",
@@ -659,7 +666,7 @@
       }
     ];
 
-    // 6. THỰC ĐƠN & PURIN
+    // DINH DƯỠNG & PURIN
     const MEAL_PLAN = [
       { day: "Thứ 2", b: "2 trứng gà luộc + 1 bánh mì đen", l: "Cơm gạo lứt + 150g Đậu phụ sốt cà chua", s: "Sữa chua Hy Lạp + Hạt hạnh nhân", d: "90g Ức gà chần bỏ nước + Salad" },
       { day: "Thứ 3", b: "Yến mạch sữa tách béo + 1 trứng ốp", l: "Bún lứt + 100g Thăn heo luộc bỏ nước", s: "Sữa tươi tách béo 200ml", d: "Đậu phụ non hấp trứng + Rau luộc" },
@@ -687,7 +694,7 @@
       const [liveModeMap, setLiveModeMap] = useState({});
 
       const [stats, setStats] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("fitflow_stats_v50") || '{"xp":220,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 220, streak: 3, water: 5, doneIds: [] }; }
+        try { return JSON.parse(localStorage.getItem("fitflow_stats_v51") || '{"xp":240,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 240, streak: 3, water: 5, doneIds: [] }; }
       });
 
       // Guided Player
@@ -697,7 +704,7 @@
       const [playerSec, setPlayerSec] = useState(5);
       const [playerPaused, setPlayerPaused] = useState(false);
 
-      useEffect(() => { localStorage.setItem("fitflow_stats_v50", JSON.stringify(stats)); }, [stats]);
+      useEffect(() => { localStorage.setItem("fitflow_stats_v51", JSON.stringify(stats)); }, [stats]);
 
       const toggleJointSafe = () => {
         const next = !jointSafeMode;
@@ -895,8 +902,10 @@
                         </button>
                       </div>
 
-                      {/* NẠP FILE MODEL 3D HOẶC TỰ ĐỘNG CHUYỂN SANG SƠ ĐỒ ĐỘNG NẾU ĐANG CHỜ FILE */}
-                      <ThreeGLTFViewer modelUrl="./model.glb" height={210} />
+                      {/* Khung Three.js 3D */}
+                      <ThreeGLTFViewer modelUrl="./model.glb" height={220} />
+
+                      {/* Sơ đồ động Step 1-2-3 */}
                       <StepDiagram type={ex.type} isLive={!!liveModeMap[ex.id]} muscleHighlight={ex.muscle} />
 
                       <div className="mt-2 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
@@ -972,7 +981,7 @@
             )}
           </main>
 
-          {/* MÀN HÌNH PLAYER TOÀN MÀN HÌNH TÍCH HỢP 3D & 5S CHUẨN BỊ */}
+          {/* MÀN HÌNH PLAYER TOÀN MÀN HÌNH */}
           {playerOpen && (
             <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
               {playerPhase !== "finish" ? (
