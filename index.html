@@ -8,12 +8,23 @@
   <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro - Anatomical 3D Mannequin</title>
+  <title>FitFlow Pro Max v5.0 - 3D Mixamo Engine</title>
 
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>🧍</text></svg>" />
+  <!-- Kết nối Manifest & Service Worker PWA để cài đặt thành App thực thụ -->
+  <link rel="manifest" href="./manifest.json" />
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
 
-  <!-- Three.js Core -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>⚡</text></svg>" />
+
+  <!-- Thư viện Three.js Core & GLTFLoader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <!-- Tailwind CSS & React UI -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -34,22 +45,29 @@
     .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
     canvas { touch-action: none; }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.96); opacity: 0.85; }
+      50% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(0.96); opacity: 0.85; }
+    }
+    .animate-ring { animation: pulse-ring 2s infinite ease-in-out; }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect, useMemo, useRef } = React;
 
-    // ÂM THANH BÍP BÁO NHỊP
-    const playBeep = (freq = 880, duration = 160) => {
+    // 1. ÂM THANH BÍP & GIỌNG ĐỌC HUẤN LUYỆN VIÊN TIẾNG VIỆT
+    const playBeep = (freq = 880, duration = 180, type = "sine") => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.type = type;
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start();
@@ -57,23 +75,35 @@
       } catch (e) {}
     };
 
-    // BỘ RENDER 3D ANATOMICAL MANNEQUIN CÓ KHUNG XƯƠNG PHÂN CẤP (HIERARCHICAL RIG)
-    const AnatomicalMannequin3D = ({ exerciseMode = "squat", cameraAngle = "front" }) => {
+    const speakVN = (text, enabled = true) => {
+      if (!enabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = "vi-VN";
+        utter.rate = 1.05;
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
+    };
+
+    // 2. COMPONENT THREE.JS GLTF 3D VIEWER (NẠP FILE model.glb TỰ ĐỘNG CĂN GIỮA & XOAY 360 ĐỘ)
+    const ThreeGLTFViewer = ({ modelUrl = "./model.glb", height = 220 }) => {
       const containerRef = useRef(null);
+      const [loadError, setLoadError] = useState(false);
+      const [isLoading, setIsLoading] = useState(true);
 
       useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const width = container.clientWidth || 340;
-        const h = 260;
+        const h = height;
 
-        // Scene & Studio Lighting
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a); // Nền studio slate tối hiện đại
+        scene.background = new THREE.Color(0x0a1120);
 
-        const camera = new THREE.PerspectiveCamera(40, width / h, 0.1, 40);
-        camera.position.set(0, 0.2, 3.8);
+        const camera = new THREE.PerspectiveCamera(45, width / h, 0.1, 100);
+        camera.position.set(0, 1.1, 3.4);
         camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -81,196 +111,72 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // Ánh sáng Studio dịu nhẹ (Soft Studio Light)
-        scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
-        keyLight.position.set(2.5, 4, 3);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        keyLight.position.set(3, 5, 4);
         scene.add(keyLight);
 
         const fillLight = new THREE.DirectionalLight(0x38bdf8, 0.6);
-        fillLight.position.set(-2.5, 2, 2);
+        fillLight.position.set(-3, 2, -2);
         scene.add(fillLight);
 
-        const rimLight = new THREE.DirectionalLight(0xf59e0b, 0.4);
-        rimLight.position.set(0, -3, -3);
-        scene.add(rimLight);
-
-        // Lưới sàn Studio tối giản
-        const grid = new THREE.GridHelper(5, 10, 0x334155, 0x1e293b);
-        grid.position.y = -1.15;
+        const grid = new THREE.GridHelper(6, 12, 0x334155, 0x1e293b);
+        grid.position.y = -0.95;
         scene.add(grid);
 
-        // HỆ CHẤT LIỆU MÀU THEO CHUẨN GIẢI PHẪU FITNESS
-        // 1. Inactive: Xám sáng mờ
-        const matInactive = new THREE.MeshLambertMaterial({ color: 0x94a3b8 });
-        // 2. Primary Muscle: Đỏ tươi (Vivid Red)
-        const matPrimary = new THREE.MeshLambertMaterial({ color: 0xef4444 });
-        // 3. Secondary Muscle: Cam ấm (Warm Orange)
-        const matSecondary = new THREE.MeshLambertMaterial({ color: 0xf97316 });
-        // 4. Khớp xương: Xám than chì
-        const matJoint = new THREE.MeshLambertMaterial({ color: 0x475569 });
+        let mixer = null;
+        const pivot = new THREE.Group();
+        pivot.position.set(0, 0, 0);
+        scene.add(pivot);
 
-        // Gán màu theo bài tập để người tập thấy rõ nhóm cơ hoạt động
-        const isSquat = exerciseMode === "squat";
-        const isPushup = exerciseMode === "pushup";
+        let modelRef = null;
 
-        const matChest = isPushup ? matPrimary : matInactive;
-        const matArm = isPushup ? matPrimary : matInactive;
-        const matCore = (isPushup || isSquat) ? matSecondary : matInactive;
-        const matThigh = isSquat ? matPrimary : matInactive;
-        const matGlute = isSquat ? matSecondary : matInactive;
-        const matCalf = isSquat ? matSecondary : matInactive;
+        if (window.THREE && window.THREE.GLTFLoader) {
+          const loader = new window.THREE.GLTFLoader();
+          loader.load(
+            modelUrl,
+            (gltf) => {
+              const model = gltf.scene;
+              modelRef = model;
 
-        // TÂM XOAY TOÀN CƠ THỂ
-        const pivotRoot = new THREE.Group();
-        pivotRoot.position.set(0, 0, 0);
-        scene.add(pivotRoot);
+              // Tự động căn giữa tâm và scale chuẩn tỷ lệ khung hình
+              const box = new THREE.Box3().setFromObject(model);
+              const size = box.getSize(new THREE.Vector3());
+              const center = box.getCenter(new THREE.Vector3());
 
-        // Nút xoay mặt trước / mặt sau
-        if (cameraAngle === "back") {
-          pivotRoot.rotation.y = Math.PI;
+              const maxDim = Math.max(size.x, size.y, size.z);
+              const scale = 1.8 / (maxDim || 1);
+              model.scale.setScalar(scale);
+
+              model.position.x = -center.x * scale;
+              model.position.y = -center.y * scale;
+              model.position.z = -center.z * scale;
+
+              pivot.add(model);
+              setIsLoading(false);
+
+              if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(model);
+                const action = mixer.clipAction(gltf.animations[0]);
+                action.play();
+              }
+            },
+            undefined,
+            (err) => {
+              console.warn("Chưa tìm thấy model.glb hoặc lỗi tải:", err);
+              setLoadError(true);
+              setIsLoading(false);
+            }
+          );
+        } else {
+          setLoadError(true);
+          setIsLoading(false);
         }
 
-        // ================= CẤU TRÚC KHUNG XƯƠNG PHÂN CẤP (HIERARCHY) =================
-        // Hông / Khung chậu (Pelvis) làm gốc
-        const pelvisGroup = new THREE.Group();
-        pelvisGroup.position.set(0, -0.05, 0);
-        pivotRoot.add(pelvisGroup);
-
-        const pelvisMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.22, 10), matGlute);
-        pelvisGroup.add(pelvisMesh);
-
-        // Cột sống / Bụng (Spine / Core)
-        const spineGroup = new THREE.Group();
-        spineGroup.position.set(0, 0.18, 0);
-        pelvisGroup.add(spineGroup);
-
-        const absMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.17, 0.24, 10), matCore);
-        spineGroup.add(absMesh);
-
-        // Lồng ngực / Ngực (Chest / Torso)
-        const chestGroup = new THREE.Group();
-        chestGroup.position.set(0, 0.22, 0);
-        spineGroup.add(chestGroup);
-
-        const chestMesh = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.22), matChest);
-        chestGroup.add(chestMesh);
-
-        // Cổ & Đầu (Neck & Head)
-        const neckMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.1, 8), matInactive);
-        neckMesh.position.set(0, 0.19, 0);
-        chestGroup.add(neckMesh);
-
-        const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 14), matInactive);
-        headMesh.scale.set(0.95, 1.15, 1.0);
-        headMesh.position.set(0, 0.35, 0);
-        chestGroup.add(headMesh);
-
-        // --- TAY PHẢI (Right Arm Hierarchy) ---
-        const rClavicle = new THREE.Group();
-        rClavicle.position.set(0.26, 0.1, 0);
-        chestGroup.add(rClavicle);
-        const rShoulderJoint = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), matJoint);
-        rClavicle.add(rShoulderJoint);
-
-        const rUpperArmGroup = new THREE.Group();
-        rClavicle.add(rUpperArmGroup);
-        const rBicep = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.35, 8), matArm);
-        rBicep.position.set(0, -0.18, 0);
-        rUpperArmGroup.add(rBicep);
-
-        const rElbowGroup = new THREE.Group();
-        rElbowGroup.position.set(0, -0.36, 0);
-        rUpperArmGroup.add(rElbowGroup);
-        const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), matJoint);
-        rElbowGroup.add(rElbowJoint);
-
-        const rForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.34, 8), matArm);
-        rForearm.position.set(0, -0.18, 0);
-        rElbowGroup.add(rForearm);
-
-        // --- TAY TRÁI (Left Arm Hierarchy) ---
-        const lClavicle = new THREE.Group();
-        lClavicle.position.set(-0.26, 0.1, 0);
-        chestGroup.add(lClavicle);
-        const lShoulderJoint = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), matJoint);
-        lClavicle.add(lShoulderJoint);
-
-        const lUpperArmGroup = new THREE.Group();
-        lClavicle.add(lUpperArmGroup);
-        const lBicep = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.35, 8), matArm);
-        lBicep.position.set(0, -0.18, 0);
-        lUpperArmGroup.add(lBicep);
-
-        const lElbowGroup = new THREE.Group();
-        lElbowGroup.position.set(0, -0.36, 0);
-        lUpperArmGroup.add(lElbowGroup);
-        const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), matJoint);
-        lElbowGroup.add(lElbowJoint);
-
-        const lForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.34, 8), matArm);
-        lForearm.position.set(0, -0.18, 0);
-        lElbowGroup.add(lForearm);
-
-        // --- CHÂN PHẢI (Right Leg Hierarchy) ---
-        const rHipJoint = new THREE.Group();
-        rHipJoint.position.set(0.14, -0.1, 0);
-        pelvisGroup.add(rHipJoint);
-        const rHipBall = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), matJoint);
-        rHipJoint.add(rHipBall);
-
-        const rThighGroup = new THREE.Group();
-        rHipJoint.add(rThighGroup);
-        const rThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.065, 0.46, 8), matThigh);
-        rThigh.position.set(0, -0.24, 0);
-        rThighGroup.add(rThigh);
-
-        const rKneeGroup = new THREE.Group();
-        rKneeGroup.position.set(0, -0.48, 0);
-        rThighGroup.add(rKneeGroup);
-        const rKneeJoint = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), matJoint);
-        rKneeGroup.add(rKneeJoint);
-
-        const rShin = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.05, 0.44, 8), matCalf);
-        rShin.position.set(0, -0.23, 0);
-        rKneeGroup.add(rShin);
-
-        const rFoot = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.16), matInactive);
-        rFoot.position.set(0, -0.46, 0.04);
-        rKneeGroup.add(rFoot);
-
-        // --- CHÂN TRÁI (Left Leg Hierarchy) ---
-        const lHipJoint = new THREE.Group();
-        lHipJoint.position.set(-0.14, -0.1, 0);
-        pelvisGroup.add(lHipJoint);
-        const lHipBall = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), matJoint);
-        lHipJoint.add(lHipBall);
-
-        const lThighGroup = new THREE.Group();
-        lHipJoint.add(lThighGroup);
-        const lThigh = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.065, 0.46, 8), matThigh);
-        lThigh.position.set(0, -0.24, 0);
-        lThighGroup.add(lThigh);
-
-        const lKneeGroup = new THREE.Group();
-        lKneeGroup.position.set(0, -0.48, 0);
-        lThighGroup.add(lKneeGroup);
-        const lKneeJoint = new THREE.Mesh(new THREE.SphereGeometry(0.065, 8, 8), matJoint);
-        lKneeGroup.add(lKneeJoint);
-
-        const lShin = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.05, 0.44, 8), matCalf);
-        lShin.position.set(0, -0.23, 0);
-        lKneeGroup.add(lShin);
-
-        const lFoot = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.16), matInactive);
-        lFoot.position.set(0, -0.46, 0.04);
-        lKneeGroup.add(lFoot);
-
-        // TƯƠNG TÁC XOAY 360 ĐỘ BẰNG TAY (TOUCH / DRAG)
+        // Tương tác chạm vuốt xoay 360 độ
         let isDragging = false;
         let prevX = 0, prevY = 0;
-        let rotY = cameraAngle === "back" ? Math.PI : 0;
-        let rotX = 0;
+        let rotY = 0, rotX = 0;
 
         const onDown = (e) => {
           isDragging = true;
@@ -285,10 +191,10 @@
 
           rotY += (curX - prevX) * 0.01;
           rotX += (curY - prevY) * 0.007;
-          rotX = Math.max(-0.4, Math.min(0.6, rotX)); // Khóa góc gật đầu
+          rotX = Math.max(-0.5, Math.min(0.6, rotX));
 
-          pivotRoot.rotation.y = rotY;
-          pivotRoot.rotation.x = rotX;
+          pivot.rotation.y = rotY;
+          pivot.rotation.x = rotX;
 
           prevX = curX;
           prevY = curY;
@@ -304,89 +210,15 @@
         window.addEventListener("touchmove", onMove, { passive: true });
         window.addEventListener("touchend", onUp);
 
-        // ================= ĐỘNG HỌC CHUYỂN ĐỘNG (KINEMATIC LOOP) =================
         let clock = new THREE.Clock();
         let reqId = null;
 
         const animate = () => {
           reqId = requestAnimationFrame(animate);
-          const t = clock.getElapsedTime();
-
-          if (exerciseMode === "squat") {
-            // Chu kỳ Squat: 0 (đứng thẳng) -> 1 (ngồi sâu vuông góc đùi)
-            const phase = (Math.sin(t * 2.2) + 1) / 2;
-
-            // Hông hạ thấp và đẩy nhẹ ra sau
-            pelvisGroup.position.set(0, -0.05 - phase * 0.42, -phase * 0.16);
-            // Thân trên đổ nhẹ về trước giữ trọng tâm
-            spineGroup.rotation.x = phase * 0.35;
-
-            // Khớp háng gập đùi
-            rThighGroup.rotation.x = -phase * 1.45;
-            lThighGroup.rotation.x = -phase * 1.45;
-
-            // Khớp gối gập cẳng chân
-            rKneeGroup.rotation.x = phase * 1.55;
-            lKneeGroup.rotation.x = phase * 1.55;
-
-            // Bàn chân giữ phẳng mặt sàn
-            rFoot.rotation.x = -phase * 0.1;
-            lFoot.rotation.x = -phase * 0.1;
-
-            // Hai tay vươn thẳng về trước thăng bằng
-            rUpperArmGroup.rotation.x = -phase * 1.25;
-            lUpperArmGroup.rotation.x = -phase * 1.25;
-            rElbowGroup.rotation.x = -phase * 0.2;
-            lElbowGroup.rotation.x = -phase * 0.2;
-
-          } else if (exerciseMode === "pushup") {
-            // Chu kỳ Push-up: 0 (đỉnh chống tay) -> 1 (ngực hạ sát sàn)
-            const phase = (Math.sin(t * 2.4) + 1) / 2;
-
-            // Cơ thể nghiêng góc plank 80 độ thẳng tắp từ đầu đến gót
-            pelvisGroup.position.set(0, 0.05 - phase * 0.16, 0);
-            pelvisGroup.rotation.x = 1.35; // Nằm ngang
-
-            // Trục lưng giữ thẳng tuyệt đối (Plank)
-            spineGroup.rotation.x = 0;
-
-            // Tay gập góc khuỷu tay 90 độ hạ ngực
-            rUpperArmGroup.rotation.x = -0.3 + phase * 0.6;
-            rUpperArmGroup.rotation.z = -0.5 - phase * 0.4;
-            rElbowGroup.rotation.x = -phase * 1.4;
-
-            lUpperArmGroup.rotation.x = -0.3 + phase * 0.6;
-            lUpperArmGroup.rotation.z = 0.5 + phase * 0.4;
-            lElbowGroup.rotation.x = -phase * 1.4;
-
-            // Hai chân duỗi thẳng phía sau
-            rThighGroup.rotation.x = 0.1;
-            lThighGroup.rotation.x = 0.1;
-            rKneeGroup.rotation.x = 0;
-            lKneeGroup.rotation.x = 0;
-
-          } else {
-            // TƯ THẾ GIẢI PHẪU CHUẨN (NEUTRAL / T-POSE NHẸ)
-            pelvisGroup.position.set(0, -0.05, 0);
-            pelvisGroup.rotation.set(0, 0, 0);
-            spineGroup.rotation.set(0, 0, 0);
-
-            // Hai tay mở góc 20 độ tự nhiên
-            rUpperArmGroup.rotation.set(0, 0, -0.25);
-            lUpperArmGroup.rotation.set(0, 0, 0.25);
-            rElbowGroup.rotation.set(0, 0, 0);
-            lElbowGroup.rotation.set(0, 0, 0);
-
-            // Hai chân đứng thẳng
-            rThighGroup.rotation.set(0, 0, 0.05);
-            lThighGroup.rotation.set(0, 0, -0.05);
-            rKneeGroup.rotation.set(0, 0, 0);
-            lKneeGroup.rotation.set(0, 0, 0);
-          }
-
+          const delta = clock.getDelta();
+          if (mixer) mixer.update(delta);
           renderer.render(scene, camera);
         };
-
         animate();
 
         return () => {
@@ -400,27 +232,20 @@
           if (container.contains(dom)) container.removeChild(dom);
           renderer.dispose();
         };
-      }, [exerciseMode, cameraAngle]);
+      }, [modelUrl, height]);
+
+      if (loadError) {
+        return null; // Tự động chuyển sang chế độ sơ đồ động STEP 1 - 2 - 3
+      }
 
       return (
-        <div className="relative w-full rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-2xl">
-          <div ref={containerRef} style={{ width: "100%", height: "260px" }} />
-
-          {/* CHÚ THÍCH HỆ MÀU CƠ ANATOMICAL (RED = CHÍNH, ORANGE = PHỤ) */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 pointer-events-none">
-            <span className="text-[10px] font-extrabold uppercase bg-slate-900/90 text-sky-400 border border-slate-700 px-2 py-0.5 rounded backdrop-blur">
-              🧍 Anatomical Mannequin
+        <div className="relative w-full rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-2xl mb-2">
+          <div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
+          <div className="absolute top-2.5 left-2.5 pointer-events-none">
+            <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-md backdrop-blur">
+              {isLoading ? "⏳ Đang tải 3D..." : "🧍 Mixamo 3D Model"}
             </span>
-            <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-2 py-0.5 rounded text-[9.5px]">
-              <span className="flex items-center gap-1 text-rose-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span> Cơ chính
-              </span>
-              <span className="flex items-center gap-1 text-amber-400 font-bold">
-                <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span> Cơ hỗ trợ
-              </span>
-            </div>
           </div>
-
           <div className="absolute bottom-2.5 right-2.5 pointer-events-none text-[9.5px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
             👆 Vuốt xoay 360°
           </div>
@@ -428,120 +253,804 @@
       );
     };
 
+    // 3. SƠ ĐỒ ĐỒ HỌA 3 BƯỚC DỰ PHÒNG CHÍNH XÁC (STEP 1 - STEP 2 - STEP 3)
+    const StepDiagram = ({ type, isLive, muscleHighlight }) => {
+      const [liveStep, setLiveStep] = useState(0);
+
+      useEffect(() => {
+        if (!isLive) return;
+        const interval = setInterval(() => {
+          setLiveStep((prev) => (prev + 1) % 3);
+        }, 850);
+        return () => clearInterval(interval);
+      }, [isLive]);
+
+      const renderPose = (stepIndex) => {
+        if (type === "pike" || type === "pushup") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+              <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+              <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🔥 {muscleHighlight || "Vai & Ngực"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <polyline points="35,45 95,12 165,42" fill="none" stroke="#ef4444" strokeWidth="3" />
+                  <line x1="45" y1="82" x2="95" y2="24" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="95" y1="24" x2="145" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="138" cy="48" r="6" fill="#ef4444" opacity="0.85" />
+                  <line x1="145" y1="54" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <circle cx="156" cy="54" r="7" fill="#fcd34d" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  <line x1="125" y1="15" x2="168" y2="42" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="168,42 158,42 165,33" fill="#ef4444" />
+                  <line x1="45" y1="82" x2="100" y2="34" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="100" y1="34" x2="158" y2="68" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="146" cy="60" r="6.5" fill="#ef4444" />
+                  <line x1="158" y1="68" x2="142" y2="74" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                  <line x1="142" y1="74" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
+                  <circle cx="168" cy="72" r="7" fill="#fcd34d" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  <line x1="132" y1="76" x2="118" y2="42" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="118,42 114,51 125,48" fill="#22c55e" />
+                  <line x1="45" y1="82" x2="95" y2="24" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="95" y1="24" x2="145" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <circle cx="138" cy="48" r="6" fill="#22c55e" opacity="0.85" />
+                  <line x1="145" y1="54" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <circle cx="156" cy="54" r="7" fill="#fcd34d" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        if (type === "squat") {
+          return (
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+              <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+              <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+              <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+                🔥 {muscleHighlight || "Đùi & Mông"}
+              </text>
+              <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+              <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+                STEP {stepIndex + 1}
+              </text>
+
+              {stepIndex === 0 && (
+                <g>
+                  <line x1="90" y1="15" x2="90" y2="82" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="4" />
+                  <circle cx="110" cy="18" r="7" fill="#fcd34d" />
+                  <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="110" y1="52" x2="110" y2="82" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="110" y1="32" x2="136" y2="32" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 1 && (
+                <g>
+                  <line x1="68" y1="25" x2="68" y2="62" stroke="#ef4444" strokeWidth="3" />
+                  <polygon points="68,62 63,53 73,53" fill="#ef4444" />
+                  <circle cx="115" cy="30" r="7" fill="#fcd34d" />
+                  <line x1="112" y1="38" x2="92" y2="58" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="92" y1="58" x2="118" y2="58" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" />
+                  <line x1="118" y1="58" x2="112" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
+                  <line x1="110" y1="42" x2="140" y2="42" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                </g>
+              )}
+              {stepIndex === 2 && (
+                <g>
+                  <line x1="68" y1="65" x2="68" y2="25" stroke="#22c55e" strokeWidth="3" />
+                  <polygon points="68,25 63,34 73,34" fill="#22c55e" />
+                  <circle cx="110" cy="18" r="7" fill="#fcd34d" />
+                  <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                  <line x1="110" y1="52" x2="110" y2="82" stroke="#22c55e" strokeWidth="6" strokeLinecap="round" />
+                </g>
+              )}
+            </svg>
+          );
+        }
+
+        return (
+          <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+            <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
+            <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
+            <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
+              🔥 {muscleHighlight || "Bụng & Lưng"}
+            </text>
+            <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
+            <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
+              STEP {stepIndex + 1}
+            </text>
+            {stepIndex === 0 && (
+              <g>
+                <line x1="35" y1="45" x2="165" y2="45" stroke="#ef4444" strokeWidth="2.5" />
+                <line x1="45" y1="82" x2="95" y2="55" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="55" x2="150" y2="55" stroke="#ef4444" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="55" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="55" r="7" fill="#fcd34d" />
+              </g>
+            )}
+            {stepIndex === 1 && (
+              <g>
+                <line x1="115" y1="76" x2="115" y2="38" stroke="#ef4444" strokeWidth="3" />
+                <polygon points="115,38 110,46 120,46" fill="#ef4444" />
+                <line x1="45" y1="82" x2="95" y2="48" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="48" x2="150" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="52" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="52" r="7" fill="#fcd34d" />
+              </g>
+            )}
+            {stepIndex === 2 && (
+              <g>
+                <line x1="95" y1="34" x2="145" y2="34" stroke="#22c55e" strokeWidth="3" />
+                <line x1="45" y1="82" x2="95" y2="52" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
+                <line x1="95" y1="52" x2="150" y2="52" stroke="#22c55e" strokeWidth="7" strokeLinecap="round" />
+                <line x1="150" y1="52" x2="150" y2="82" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
+                <circle cx="162" cy="52" r="7" fill="#fcd34d" />
+              </g>
+            )}
+          </svg>
+        );
+      };
+
+      if (isLive) return <div className="p-0.5">{renderPose(liveStep)}</div>;
+      return (
+        <div className="space-y-1">
+          {renderPose(0)}
+          {renderPose(1)}
+          {renderPose(2)}
+        </div>
+      );
+    };
+
+    // 4. GÓI KHỞI ĐỘNG & GIÃN CƠ CHUẨN HÓA
+    const STANDARD_WARMUP = [
+      {
+        id: "wu_auto_1",
+        phaseTag: "🔥 KHỞI ĐỘNG ĐẦU BUỔI",
+        name: "Xoay Mở Khớp Vai, Cổ Tay & Cổ Chân",
+        baseSets: 1,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 15,
+        type: "squat",
+        muscle: "Dịch Khớp & Cổ Chân",
+        steps: [
+          "STEP 1: Xoay kỹ cổ chân, khớp gối, khớp hông và xoay mở bả vai mỗi bên 15 giây.",
+          "STEP 2: Thả lỏng vai gáy, hít thở sâu làm ấm cơ thể.",
+          "STEP 3: Sẵn sàng vào các bài tập chính."
+        ]
+      }
+    ];
+
+    const STANDARD_COOLDOWN = [
+      {
+        id: "cd_auto_1",
+        phaseTag: "🧘 GIÃN CƠ CUỐI BUỔI",
+        name: "Child's Pose (Tư Thế Em Bé Thả Lỏng Lưng)",
+        baseSets: 1,
+        repsText: "60 giây",
+        workSec: 60,
+        rest: 15,
+        type: "pike",
+        muscle: "Thắt Lưng & Khớp Vai",
+        steps: [
+          "STEP 1: Quỳ gối trên sàn, ngồi lùi mông chạm nhẹ lên hai gót chân.",
+          "STEP 2: Vươn dài hai tay về phía trước, hạ thấp ngực xuống sàn.",
+          "STEP 3: Hít sâu bằng mũi 4 giây, thở chậm bằng miệng 6 giây để hạ nhịp tim."
+        ]
+      }
+    ];
+
+    // 5. CƠ SỞ DỮ LIỆU LỊCH TẬP 7 NGÀY
+    const WORKOUT_PLAN = [
+      {
+        day: "Thứ 2",
+        title: "Thân Trên & Chống Gù Cột Sống",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Mở ngực, khỏe bả vai, giải phóng áp lực đĩa đệm",
+        exercises: [
+          {
+            id: "m1",
+            name: "Incline Push-up (Chống đẩy điểm tựa)",
+            baseSets: 3,
+            repsText: "12 lần",
+            workSec: 45,
+            rest: 45,
+            type: "pushup",
+            muscle: "Ngực & Tay sau",
+            steps: [
+              "STEP 1: Chống hai tay lên mặt bàn hoặc sàn, lưng - mông tạo thành đường thẳng.",
+              "STEP 2: Hạ ngực xuống chậm rãi, khép khuỷu tay 45 độ so với thân.",
+              "STEP 3: Đẩy mạnh thân người trở về vị trí ban đầu."
+            ],
+            alt: {
+              name: "Wall Push-up (Chống đẩy tường êm khớp)",
+              repsText: "15 lần",
+              steps: [
+                "STEP 1: Đứng cách tường 1 sải tay, đặt hai bàn tay ngang tầm ngực lên tường.",
+                "STEP 2: Gập khuỷu tay hạ người sát tường nhẹ nhàng, giữ trục lưng thẳng.",
+                "STEP 3: Đẩy người trở lại vị trí ban đầu, bảo vệ cổ tay."
+              ]
+            }
+          },
+          {
+            id: "m2",
+            name: "Pike Push-up (Đẩy vai chữ V)",
+            baseSets: 3,
+            repsText: "10 lần",
+            workSec: 40,
+            rest: 60,
+            type: "pike",
+            muscle: "Cơ Vai & Lưng trên",
+            steps: [
+              "STEP 1: Đẩy hông lên cao tạo góc chữ V ngược, gót chân hơi nhón.",
+              "STEP 2: Gập khuỷu tay hạ đỉnh đầu xuống hướng về trước hai bàn tay.",
+              "STEP 3: Đẩy ngược thân người về lại vị trí đỉnh chữ V."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 3",
+        title: "Thân Dưới & Khớp Gối Linh Hoạt",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Kích hoạt cơ mông - đùi bị ỳ sau nhiều giờ ngồi ghế",
+        exercises: [
+          {
+            id: "tu1",
+            name: "Bodyweight Squat (Squat chuẩn form)",
+            baseSets: 4,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi trước & Mông",
+            steps: [
+              "STEP 1: Hai chân mở rộng bằng vai, mũi chân mở 15 độ.",
+              "STEP 2: Đẩy hông ra sau và hạ đùi song song mặt sàn.",
+              "STEP 3: Đạp gót đứng thẳng dậy, siết chặt cơ mông."
+            ],
+            alt: {
+              name: "Chair Box Squat (Squat chạm ghế an toàn)",
+              repsText: "12 lần",
+              steps: [
+                "STEP 1: Đứng trước ghế chắc chắn, hai chân rộng bằng vai.",
+                "STEP 2: Hạ hông lùi ra sau cho tới khi mông chạm nhẹ mặt ghế.",
+                "STEP 3: Đứng thẳng dậy bằng lực gót chân, bảo vệ tuyệt đối khớp gối."
+              ]
+            }
+          }
+        ]
+      },
+      {
+        day: "Thứ 4",
+        title: "Phục Hồi Chair Yoga & Somatic",
+        duration: "20 phút",
+        isRest: true,
+        focus: "Kéo giãn đĩa đệm lưng trên ghế, đào thải axit uric",
+        exercises: [
+          {
+            id: "w1",
+            name: "Chair Cat-Cow (Mở ngực trên ghế)",
+            baseSets: 3,
+            repsText: "60 giây",
+            workSec: 60,
+            rest: 20,
+            type: "plank",
+            muscle: "Cột sống & Vai",
+            steps: [
+              "STEP 1: Ngồi thẳng trên mép ghế, hai bàn chân phẳng trên sàn.",
+              "STEP 2: Hít vào ưỡn ngực, khép hai bả vai ra sau.",
+              "STEP 3: Thở ra cuộn tròn lưng ra sau, thả lỏng đầu cổ."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 5",
+        title: "Cardio Nhẹ & Đốt Mỡ Cơ Bụng",
+        duration: "40 phút",
+        isRest: false,
+        focus: "Tăng lưu thông máu thận và tim phổi không bật nhảy",
+        exercises: [
+          {
+            id: "th1",
+            name: "High Knee March (Nâng đùi tại chỗ)",
+            baseSets: 4,
+            repsText: "45 giây",
+            workSec: 45,
+            rest: 30,
+            type: "squat",
+            muscle: "Tim mạch & Bụng dưới",
+            steps: [
+              "STEP 1: Đứng thẳng, hai tay co tự nhiên.",
+              "STEP 2: Nâng cao đùi vuông góc bụng, đánh tay nhịp nhàng.",
+              "STEP 3: Đổi chân êm ái, tiếp đất nhẹ nhàng bằng nửa bàn chân."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 6",
+        title: "Sức Bền Toàn Thân & Dẻo Dai",
+        duration: "35 phút",
+        isRest: false,
+        focus: "Tăng cường liên kết nhóm cơ lõi và bắp chân",
+        exercises: [
+          {
+            id: "f1",
+            name: "Squat to Calf Raise (Squat nhón gót)",
+            baseSets: 3,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi & Bắp chuối",
+            steps: [
+              "STEP 1: Đứng hai chân rộng bằng vai.",
+              "STEP 2: Hạ người squat chuẩn form.",
+              "STEP 3: Khi đứng thẳng kết hợp nhón cao hai gót chân để bơm máu tĩnh mạch."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Thứ 7",
+        title: "Vận Động Ngoài Trời Hoặc Wall Flow",
+        duration: "30 phút",
+        isRest: false,
+        focus: "Đốt mỡ tự nhiên, kích hoạt khớp hông",
+        exercises: [
+          {
+            id: "sa1",
+            name: "Sumo Squat (Squat rộng chân)",
+            baseSets: 3,
+            repsText: "15 lần",
+            workSec: 45,
+            rest: 45,
+            type: "squat",
+            muscle: "Đùi trong & Hông",
+            steps: [
+              "STEP 1: Chân mở rộng gấp rưỡi vai, mũi chân mở 45 độ.",
+              "STEP 2: Hạ thẳng hông xuống, gối hướng theo mũi chân.",
+              "STEP 3: Đẩy người đứng thẳng lên, siết cơ đùi trong."
+            ]
+          }
+        ]
+      },
+      {
+        day: "Chủ Nhật",
+        title: "Nghỉ Ngơi Tái Tạo & Giấc Ngủ",
+        duration: "Thư giãn",
+        isRest: true,
+        focus: "Ngủ sâu 7.5 tiếng, chuẩn bị tuần mới",
+        exercises: [
+          {
+            id: "su1",
+            name: "Gác Chân Thư Giãn Tĩnh Mạch",
+            baseSets: 1,
+            repsText: "10 phút",
+            workSec: 120,
+            rest: 20,
+            type: "plank",
+            muscle: "Tuần hoàn chân",
+            steps: [
+              "STEP 1: Nằm ngửa gác chân lên ghế hoặc tường.",
+              "STEP 2: Thả lỏng toàn thân, hít thở bụng sâu.",
+              "STEP 3: Uống một cốc nước lọc ấm."
+            ]
+          }
+        ]
+      }
+    ];
+
+    // 6. THỰC ĐƠN & PURIN
+    const MEAL_PLAN = [
+      { day: "Thứ 2", b: "2 trứng gà luộc + 1 bánh mì đen", l: "Cơm gạo lứt + 150g Đậu phụ sốt cà chua", s: "Sữa chua Hy Lạp + Hạt hạnh nhân", d: "90g Ức gà chần bỏ nước + Salad" },
+      { day: "Thứ 3", b: "Yến mạch sữa tách béo + 1 trứng ốp", l: "Bún lứt + 100g Thăn heo luộc bỏ nước", s: "Sữa tươi tách béo 200ml", d: "Đậu phụ non hấp trứng + Rau luộc" },
+      { day: "Thứ 4", b: "Bánh mì nguyên cám + Nước ép táo", l: "Cơm + Trứng cuộn + Canh bí đao", s: "Hạt óc chó + 1 quả cam", d: "90g Cá sông hấp gừng + Bông cải" },
+      { day: "Thứ 5", b: "Khoai lang luộc + 2 trứng gà luộc", l: "Cơm gạo lứt + Đậu phụ sốt xì dầu", s: "Sữa chua hạt chia", d: "90g Ức gà xé phay + Canh mướp" },
+      { day: "Thứ 6", b: "Phở cuốn trứng & rau củ", l: "Cơm + 100g Thăn heo rang cháy cạnh", s: "1 quả ổi hoặc kiwi (giàu Vit C)", d: "Salad trứng luộc + Đậu gà" },
+      { day: "Thứ 7", b: "Cháo yến mạch trứng gà", l: "Miến trộn + 90g Ức gà áp chảo", s: "Phô mai ít béo + Hạt điều", d: "Đậu phụ cà chua + Củ cải luộc" },
+      { day: "Chủ Nhật", b: "2 trứng chần + Bánh mì bơ đậu phộng", l: "Cơm gia đình: Trứng đúc đậu phụ", s: "Nước chanh pha loãng ít đường", d: "Súp bí đỏ sữa tươi + Salad trứng" }
+    ];
+
+    const PURINE_DB = [
+      { name: "Trứng gà, trứng vịt", level: "green", mg: "~1-5 mg", tip: "0% lo lắng về axit uric, nguồn đạm số 1 phục hồi cơ bắp." },
+      { name: "Sữa tách béo / Sữa chua Hy Lạp", level: "green", mg: "0 mg", tip: "Protein trong sữa hỗ trợ thận tăng tốc đào thải axit uric." },
+      { name: "Đậu phụ / Đậu hũ", level: "green", mg: "~20-35 mg", tip: "Đạm thực vật tinh khiết lành tính cho người gout/axit uric cao." },
+      { name: "Ức gà (đã luộc chần bỏ nước đầu)", level: "yellow", mg: "~130 mg", tip: "Ăn 80-100g/bữa, luôn bỏ nước luộc để loại bỏ purin hòa tan." },
+      { name: "Thịt bò, Hải sản có vỏ, Lòng mề", level: "red", mg: ">250 mg", tip: "Cần kiêng triệt để trong giai đoạn chỉ số axit uric đang cao." }
+    ];
+
     function App() {
-      const [testMode, setTestMode] = useState("squat"); // "squat" | "pushup" | "neutral"
-      const [camAngle, setCamAngle] = useState("front"); // "front" | "back"
+      const [activeTab, setActiveTab] = useState("workout");
+      const [selectedDayIdx, setSelectedDayIdx] = useState(0);
+      const [voiceEnabled, setVoiceEnabled] = useState(true);
+      const [swappedMap, setSwappedMap] = useState({});
+      const [jointSafeMode, setJointSafeMode] = useState(false);
+      const [liveModeMap, setLiveModeMap] = useState({});
+
+      const [stats, setStats] = useState(() => {
+        try { return JSON.parse(localStorage.getItem("fitflow_stats_v50") || '{"xp":220,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 220, streak: 3, water: 5, doneIds: [] }; }
+      });
+
+      // Guided Player
+      const [playerOpen, setPlayerOpen] = useState(false);
+      const [playerExIdx, setPlayerExIdx] = useState(0);
+      const [playerPhase, setPlayerPhase] = useState("prepare");
+      const [playerSec, setPlayerSec] = useState(5);
+      const [playerPaused, setPlayerPaused] = useState(false);
+
+      useEffect(() => { localStorage.setItem("fitflow_stats_v50", JSON.stringify(stats)); }, [stats]);
+
+      const toggleJointSafe = () => {
+        const next = !jointSafeMode;
+        setJointSafeMode(next);
+        if (next) {
+          const newMap = {};
+          WORKOUT_PLAN.forEach((d) => d.exercises.forEach((ex) => { if (ex.alt) newMap[ex.id] = true; }));
+          setSwappedMap(newMap);
+          speakVN("Đã bật chế độ êm khớp", voiceEnabled);
+        } else {
+          setSwappedMap({});
+        }
+      };
+
+      const baseDay = WORKOUT_PLAN[selectedDayIdx];
+      const currentWorkout = useMemo(() => {
+        return {
+          ...baseDay,
+          exercises: [...STANDARD_WARMUP, ...baseDay.exercises, ...STANDARD_COOLDOWN]
+        };
+      }, [baseDay]);
+
+      const currentMeal = MEAL_PLAN[selectedDayIdx];
+
+      const startGuidedSession = () => {
+        const firstEx = currentWorkout.exercises[0];
+        setPlayerExIdx(0);
+        setPlayerPhase("prepare");
+        setPlayerSec(5);
+        setPlayerPaused(false);
+        setPlayerOpen(true);
+        playBeep(880, 200);
+        speakVN(`Chuẩn bị vào bài: ${firstEx.name}`, voiceEnabled);
+      };
+
+      useEffect(() => {
+        if (!playerOpen || playerPaused || playerPhase === "finish") return;
+
+        if (playerSec <= 0) {
+          const exercises = currentWorkout.exercises;
+          const currEx = exercises[playerExIdx];
+
+          if (playerPhase === "prepare") {
+            setPlayerPhase("work");
+            setPlayerSec(currEx.workSec || 45);
+            playBeep(1046, 250);
+            speakVN("Bắt đầu thực hiện", voiceEnabled);
+          } else if (playerPhase === "work") {
+            setStats(p => ({ ...p, xp: p.xp + 25, doneIds: p.doneIds.includes(currEx.id) ? p.doneIds : [...p.doneIds, currEx.id] }));
+            if (playerExIdx + 1 < exercises.length) {
+              setPlayerPhase("rest");
+              setPlayerSec(currEx.rest || 30);
+              playBeep(660, 250);
+              speakVN(`Nghỉ ngơi. Bài tiếp theo: ${exercises[playerExIdx + 1].name}`, voiceEnabled);
+            } else {
+              setPlayerPhase("finish");
+              playBeep(1046, 450);
+              speakVN("Chúc mừng bạn đã hoàn thành xuất sắc buổi tập!", voiceEnabled);
+            }
+          } else if (playerPhase === "rest") {
+            const nextIdx = playerExIdx + 1;
+            setPlayerExIdx(nextIdx);
+            setPlayerPhase("prepare");
+            setPlayerSec(5);
+            playBeep(880, 200);
+            speakVN(`Chuẩn bị tư thế cho: ${exercises[nextIdx].name}`, voiceEnabled);
+          }
+          return;
+        }
+
+        if (playerSec === 10 && playerPhase === "work") speakVN("Còn 10 giây", voiceEnabled);
+        if (playerSec <= 3 && playerSec >= 1) playBeep(740, 90);
+
+        const timer = setInterval(() => setPlayerSec(s => s - 1), 1000);
+        return () => clearInterval(timer);
+      }, [playerOpen, playerPaused, playerSec, playerPhase, playerExIdx, currentWorkout, voiceEnabled]);
+
+      const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+      const activeCurrentEx = currentWorkout.exercises[playerExIdx] || {};
+      const nextExItem = currentWorkout.exercises[playerExIdx + 1] || null;
 
       return (
-        <div className="max-w-md mx-auto min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 pb-12 safe-top safe-bottom">
+        <div className="max-w-md mx-auto min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 pb-24">
           {/* HEADER */}
-          <header className="px-4 py-3 border-b border-slate-800 bg-slate-900/95 backdrop-blur flex justify-between items-center">
-            <div>
-              <h1 className="text-base font-extrabold text-sky-400 flex items-center gap-1.5">
-                <span>FitFlow 3D Mannequin</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-bold">
-                  v4.5
-                </span>
-              </h1>
-              <p className="text-[11px] text-slate-400">Khung xương chuẩn • Cơ chính (Đỏ) • Cơ phụ (Cam)</p>
-            </div>
+          <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-3.5 py-2.5 safe-top">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-base font-extrabold text-sky-400">FitFlow 3D Max</h1>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
+                    🔥 {stats.streak} Ngày
+                  </span>
+                  <span className="text-[10px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded-full font-bold">
+                    {stats.xp} XP
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">Mixamo 3D Engine • Voice Coach • Low-Purine</p>
+              </div>
 
-            {/* Nút xem Mặt Trước / Mặt Sau */}
-            <div className="flex bg-slate-800 p-0.5 rounded-xl border border-slate-700">
-              <button
-                onClick={() => setCamAngle("front")}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg ${camAngle === "front" ? "bg-sky-600 text-white" : "text-slate-400"}`}
-              >
-                Trước
-              </button>
-              <button
-                onClick={() => setCamAngle("back")}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg ${camAngle === "back" ? "bg-sky-600 text-white" : "text-slate-400"}`}
-              >
-                Sau
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={toggleJointSafe}
+                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-bold ${
+                    jointSafeMode ? "bg-amber-500/20 text-amber-300 border-amber-500/50" : "bg-slate-800 text-slate-300 border-slate-700"
+                  }`}
+                >
+                  {jointSafeMode ? "🛡️ Êm Khớp: BẬT" : "🛡️ Êm Khớp"}
+                </button>
+                <button
+                  onClick={() => setVoiceEnabled(!voiceEnabled)}
+                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-bold ${
+                    voiceEnabled ? "bg-emerald-600 text-white border-emerald-400" : "bg-slate-800 text-slate-400 border-slate-700"
+                  }`}
+                >
+                  {voiceEnabled ? "🔊" : "🔇"}
+                </button>
+              </div>
             </div>
           </header>
 
-          {/* KHU VỰC THỬ NGHIỆM CHÍNH */}
-          <main className="p-4 space-y-4 flex-1">
-            {/* THANH CHỌN BÀI TẬP KIỂM TRA CHUYỂN ĐỘNG */}
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
-              <button
-                onClick={() => setTestMode("squat")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 ${
-                  testMode === "squat" ? "bg-sky-600 text-white shadow" : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <span>🦵 Bài 1: Squat</span>
-                <span className="text-[9px] opacity-80">Đùi & Mông</span>
-              </button>
-
-              <button
-                onClick={() => setTestMode("pushup")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 ${
-                  testMode === "pushup" ? "bg-sky-600 text-white shadow" : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <span>💪 Bài 2: Push-up</span>
-                <span className="text-[9px] opacity-80">Ngực & Tay sau</span>
-              </button>
-
-              <button
-                onClick={() => setTestMode("neutral")}
-                className={`py-2 rounded-xl text-xs font-bold transition flex flex-col items-center gap-0.5 ${
-                  testMode === "neutral" ? "bg-purple-600 text-white shadow" : "text-slate-400 hover:bg-slate-800"
-                }`}
-              >
-                <span>🧍 Chuẩn Giải Phẫu</span>
-                <span className="text-[9px] opacity-80">Neutral Pose</span>
-              </button>
+          {/* CHỌN THỨ TRONG TUẦN */}
+          <div className="px-3 pt-2.5">
+            <div className="grid grid-cols-7 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
+              {WORKOUT_PLAN.map((d, idx) => (
+                <button
+                  key={d.day}
+                  onClick={() => setSelectedDayIdx(idx)}
+                  className={`py-1.5 rounded-lg text-center transition ${
+                    idx === selectedDayIdx
+                      ? "bg-sky-600 text-white font-bold shadow"
+                      : d.isRest ? "text-emerald-400 hover:bg-slate-800" : "text-slate-400 hover:bg-slate-800"
+                  }`}
+                >
+                  <div className="text-[11px]">{d.day.replace("Thứ ", "T").replace("Chủ Nhật", "CN")}</div>
+                  <div className="text-[9px] opacity-80">{d.isRest ? "Nghỉ" : "Tập"}</div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {/* KHUNG HIỂN THỊ 3D */}
-            <AnatomicalMannequin3D exerciseMode={testMode} cameraAngle={camAngle} />
+          {/* MAIN TABS */}
+          <main className="p-3 space-y-3.5 flex-1">
+            {activeTab === "workout" && (
+              <div className="space-y-3">
+                <div className="p-4 rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/60 border-slate-700/80 shadow-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-xs font-bold text-sky-400 uppercase">{currentWorkout.day} • {currentWorkout.duration}</span>
+                      <h2 className="text-base font-extrabold mt-0.5">{currentWorkout.title}</h2>
+                    </div>
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold">
+                      {currentWorkout.exercises.length} Động tác
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1">🎯 {currentWorkout.focus}</p>
 
-            {/* BẢNG GIẢI THÍCH NHÓM CƠ THEO BÀI ĐANG CHỌN */}
-            <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
-              <h3 className="font-extrabold text-sm text-white flex items-center justify-between">
-                <span>
-                  {testMode === "squat" && "Động tác: Bodyweight Squat"}
-                  {testMode === "pushup" && "Động tác: Standard Push-up"}
-                  {testMode === "neutral" && "Tư thế Giải phẫu gốc (Neutral)"}
-                </span>
-                <span className="text-xs text-sky-400 font-normal">60 FPS</span>
-              </h3>
-
-              {testMode === "squat" && (
-                <div className="text-xs text-slate-300 space-y-1.5">
-                  <p><b className="text-rose-400">🔴 Cơ chính phát lực:</b> Cơ tứ đầu đùi (Quadriceps) tô màu đỏ tươi.</p>
-                  <p><b className="text-amber-400">🟠 Cơ phụ hỗ trợ:</b> Cơ mông lớn (Glutes) & Bắp chân (Calves) tô màu cam ấm.</p>
-                  <p className="text-[11px] text-slate-400 pt-1">
-                    ✓ Khớp gối và khớp háng gập đồng bộ, giữ thân người thăng bằng không bị biến dạng chi.
-                  </p>
+                  <button
+                    onClick={startGuidedSession}
+                    className="mt-3 w-full py-2.5 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+                  >
+                    <span>▶️ BẮT ĐẦU BUỔI TẬP (CÓ 5S CHUẨN BỊ & XEM TRƯỚC BÀI SAU)</span>
+                  </button>
                 </div>
-              )}
 
-              {testMode === "pushup" && (
-                <div className="text-xs text-slate-300 space-y-1.5">
-                  <p><b className="text-rose-400">🔴 Cơ chính phát lực:</b> Cơ ngực lớn (Pectorals) & Cơ tay sau (Triceps) tô màu đỏ tươi.</p>
-                  <p><b className="text-amber-400">🟠 Cơ phụ hỗ trợ:</b> Cơ bụng và cơ lõi (Core/Abs) siết chặt giữ đường thẳng.</p>
-                  <p className="text-[11px] text-slate-400 pt-1">
-                    ✓ Khuỷu tay gập mở góc 45 độ chuẩn giải phẫu, toàn bộ thân người plank song phẳng.
-                  </p>
-                </div>
-              )}
+                {/* DANH SÁCH BÀI TẬP */}
+                {currentWorkout.exercises.map((ex) => {
+                  const isDone = stats.doneIds.includes(ex.id);
+                  const isSwapped = !!swappedMap[ex.id] && !!ex.alt;
+                  const displayName = isSwapped ? ex.alt.name : ex.name;
+                  const displaySteps = isSwapped ? ex.alt.steps : ex.steps;
 
-              {testMode === "neutral" && (
-                <div className="text-xs text-slate-300 space-y-1.5">
-                  <p>Mô hình nhân vật thể thao tối giản (Athletic Low-Poly Mannequin) ở trạng thái đứng nghỉ chuẩn xác.</p>
-                  <p className="text-[11px] text-slate-400">
-                    Bấm nút <b>"Trước" / "Sau"</b> ở góc trên hoặc dùng ngón tay vuốt ngang để kiểm tra độ cân đối tỉ lệ từ mọi góc độ.
-                  </p>
+                  return (
+                    <div key={ex.id} className={`p-3.5 rounded-2xl border transition ${isDone ? "bg-emerald-950/20 border-emerald-700/60" : "bg-slate-900 border-slate-800"}`}>
+                      {ex.phaseTag && (
+                        <div className="mb-1.5">
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                            {ex.phaseTag}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div>
+                          <h3 className="font-bold text-sm text-white">{displayName}</h3>
+                          <p className="text-xs text-sky-400 font-semibold mt-0.5">{ex.baseSets} hiệp × {ex.repsText} • Nghỉ {ex.rest}s</p>
+                        </div>
+                        <button
+                          onClick={() => setStats(p => ({
+                            ...p,
+                            xp: isDone ? p.xp - 15 : p.xp + 20,
+                            doneIds: isDone ? p.doneIds.filter(i => i !== ex.id) : [...p.doneIds, ex.id]
+                          }))}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold ${isDone ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-300 border border-slate-700"}`}
+                        >
+                          {isDone ? "✓ Xong" : "Hoàn thành"}
+                        </button>
+                      </div>
+
+                      {/* NẠP FILE MODEL 3D HOẶC TỰ ĐỘNG CHUYỂN SANG SƠ ĐỒ ĐỘNG NẾU ĐANG CHỜ FILE */}
+                      <ThreeGLTFViewer modelUrl="./model.glb" height={210} />
+                      <StepDiagram type={ex.type} isLive={!!liveModeMap[ex.id]} muscleHighlight={ex.muscle} />
+
+                      <div className="mt-2 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
+                        {displaySteps.map((st, i) => (
+                          <p key={i} className="text-xs text-slate-300 leading-relaxed">{st}</p>
+                        ))}
+                      </div>
+
+                      <div className="mt-2.5 flex justify-between items-center">
+                        <button
+                          onClick={() => setLiveModeMap(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                          className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-amber-300"
+                        >
+                          {liveModeMap[ex.id] ? "🖼️ Xem 3 Bước" : "▶️ Chạy Sơ Đồ Động"}
+                        </button>
+                        {ex.alt && (
+                          <button
+                            onClick={() => setSwappedMap(prev => ({ ...prev, [ex.id]: !prev[ex.id] }))}
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-800 border border-slate-700 text-emerald-300"
+                          >
+                            🔄 {isSwapped ? "Về bài gốc" : "Đổi bài êm hơn"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {activeTab === "diet" && (
+              <div className="space-y-3">
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-bold text-sm text-sky-400">💧 Nước lọc đào thải Axit Uric</h3>
+                      <p className="text-xs text-slate-400">Mục tiêu: 11 cốc (2.75 Lít/ngày)</p>
+                    </div>
+                    <span className="text-lg font-extrabold text-white">{stats.water} / 11 cốc</span>
+                  </div>
+                  <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
+                    <div className="bg-sky-500 h-full" style={{ width: `${Math.min(100, (stats.water / 11) * 100)}%` }} />
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={() => setStats(s => ({ ...s, water: Math.max(0, s.water - 1) }))} className="px-3 py-2 bg-slate-800 rounded-xl text-xs font-bold">-1</button>
+                    <button onClick={() => { setStats(s => ({ ...s, water: s.water + 1, xp: s.xp + 5 })); playBeep(880, 100); }} className="flex-1 py-2 bg-sky-600 rounded-xl text-xs font-bold text-white">+ Uống 1 cốc 250ml (+5 XP)</button>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h3 className="font-bold text-sm text-emerald-400">🥗 Thực đơn {currentMeal.day}</h3>
+                  <div className="text-xs space-y-2 text-slate-300">
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800"><b className="text-amber-300">☀️ Sáng: </b>{currentMeal.b}</div>
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800"><b className="text-sky-300">🍱 Trưa: </b>{currentMeal.l}</div>
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800"><b className="text-purple-300">🍎 Phụ: </b>{currentMeal.s}</div>
+                    <div className="p-2 bg-slate-950 rounded-xl border border-slate-800"><b className="text-emerald-300">🌙 Tối: </b>{currentMeal.d}</div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
+                  <h3 className="font-bold text-sm text-amber-400">🔎 Tra Cứu Nhanh Thực Phẩm Purin</h3>
+                  {PURINE_DB.map((f, i) => (
+                    <div key={i} className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
+                      <div>
+                        <b className="text-white">{f.level === "green" ? "🟢 " : f.level === "yellow" ? "🟡 " : "🔴 "}{f.name}</b>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{f.tip}</p>
+                      </div>
+                      <span className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono shrink-0 ml-2">{f.mg}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </main>
+
+          {/* MÀN HÌNH PLAYER TOÀN MÀN HÌNH TÍCH HỢP 3D & 5S CHUẨN BỊ */}
+          {playerOpen && (
+            <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
+              {playerPhase !== "finish" ? (
+                <>
+                  <div className="flex justify-between items-center border-b border-slate-800 pb-2.5">
+                    <div>
+                      <span className="text-xs font-bold uppercase text-sky-400">
+                        {activeCurrentEx.phaseTag || "🔥 BÀI TẬP CHÍNH"} ({playerExIdx + 1}/{currentWorkout.exercises.length})
+                      </span>
+                      <h2 className="text-base font-extrabold text-white">{activeCurrentEx.name}</h2>
+                    </div>
+                    <button onClick={() => setPlayerOpen(false)} className="px-3 py-1.5 bg-slate-800 rounded-xl text-xs font-bold text-slate-300">✕ Thoát</button>
+                  </div>
+
+                  <div className="my-auto space-y-2 text-center">
+                    {playerPhase === "prepare" && (
+                      <div className="bg-amber-500/20 border border-amber-500/40 py-1.5 rounded-xl animate-pulse">
+                        <span className="text-xs font-extrabold text-amber-300 uppercase">⚡ CHUẨN BỊ VÀO TƯ THẾ (5 GIÂY)</span>
+                      </div>
+                    )}
+                    {playerPhase === "work" && (
+                      <span className="inline-block px-4 py-0.5 rounded-full text-xs font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        🔥 ĐANG THỰC HIỆN
+                      </span>
+                    )}
+                    {playerPhase === "rest" && (
+                      <span className="inline-block px-4 py-0.5 rounded-full text-xs font-extrabold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/40">
+                        💧 NGHỈ HÍT THỞ SÂU
+                      </span>
+                    )}
+
+                    <div className="text-5xl font-mono font-black text-white animate-ring">
+                      {formatTime(playerSec)}
+                    </div>
+
+                    {playerPhase === "rest" && nextExItem ? (
+                      <div className="bg-sky-950/60 border border-sky-600/40 p-3 rounded-2xl text-left space-y-1">
+                        <span className="text-[10px] font-bold uppercase text-sky-300 bg-sky-500/20 px-2 py-0.5 rounded">⏭️ Bài tiếp theo chuẩn bị</span>
+                        <h4 className="text-sm font-extrabold text-white">{nextExItem.name}</h4>
+                        <p className="text-[11px] text-slate-300">🎯 Trọng tâm: {nextExItem.muscle}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <ThreeGLTFViewer modelUrl="./model.glb" height={220} />
+                        <StepDiagram type={activeCurrentEx.type} isLive={true} muscleHighlight={activeCurrentEx.muscle} />
+                      </>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800">
+                    <button onClick={() => setPlayerSec(s => s + 15)} className="py-2.5 bg-slate-800 rounded-xl text-xs font-bold text-slate-200">+15s</button>
+                    <button onClick={() => setPlayerPaused(!playerPaused)} className="py-2.5 bg-sky-600 rounded-xl text-xs font-extrabold text-white">{playerPaused ? "▶️ Tiếp tục" : "⏸️ Tạm dừng"}</button>
+                    <button onClick={() => setPlayerSec(0)} className="py-2.5 bg-emerald-600 rounded-xl text-xs font-extrabold text-white">Bỏ qua ⏭️</button>
+                  </div>
+                </>
+              ) : (
+                <div className="my-auto text-center space-y-4 p-2">
+                  <div className="text-5xl">🏆</div>
+                  <h2 className="text-xl font-extrabold text-emerald-400">Hoàn Thành Buổi Tập!</h2>
+                  <div className="space-y-2 pt-2">
+                    <button onClick={() => { setStats(p => ({ ...p, xp: p.xp + 50, streak: p.streak + 1 })); setPlayerOpen(false); }} className="w-full py-3 bg-emerald-600/20 border border-emerald-500/40 rounded-2xl text-xs font-bold text-emerald-300">💪 Hoàn tất (+50 XP)</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BOTTOM NAVBAR */}
+          <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-bottom z-30">
+            <div className="max-w-md mx-auto grid grid-cols-2 p-1.5 gap-1">
+              <button onClick={() => setActiveTab("workout")} className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center ${activeTab === "workout" ? "bg-sky-600 text-white" : "text-slate-400"}`}>
+                <span>🏋️ Lịch Tập 3D</span>
+              </button>
+              <button onClick={() => setActiveTab("diet")} className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center ${activeTab === "diet" ? "bg-sky-600 text-white" : "text-slate-400"}`}>
+                <span>🥗 Axit Uric & Nước</span>
+              </button>
+            </div>
+          </nav>
         </div>
       );
     }
