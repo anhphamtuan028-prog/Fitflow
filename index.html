@@ -8,14 +8,14 @@
   <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro Max v4.2 - Three.js 3D Procedural</title>
+  <title>FitFlow Pro Max v4.3 - Fixed 3D Center</title>
 
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>🧊</text></svg>" />
 
-  <!-- Thư viện Three.js Core nhẹ tải trực tiếp qua CDN -->
+  <!-- Three.js Core -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Tailwind CSS & React UI -->
+  <!-- Tailwind & React -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -42,7 +42,6 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    // 1. ÂM THANH BÍP & GIỌNG HLV TIẾNG VIỆT
     const playBeep = (freq = 880, duration = 180, type = "sine") => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -69,8 +68,8 @@
       } catch (e) {}
     };
 
-    // 2. KHỐI THREE.JS PROCEDURAL 3D CANVAS TƯƠNG TÁC XOAY 360 ĐỘ
-    const ThreeExerciseCanvas = ({ type = "squat", height = 180 }) => {
+    // 2. KHỐI THREE.JS 3D ĐÃ FIX TÂM XOAY, KHÔNG BỊ CHÌM VÀ KÉO ĐA HƯỚNG ĐƯỢC
+    const ThreeExerciseCanvas = ({ type = "squat", height = 210 }) => {
       const containerRef = useRef(null);
 
       useEffect(() => {
@@ -80,24 +79,23 @@
         const width = container.clientWidth || 320;
         const h = height;
 
-        // Thiết lập Scene, Camera, Renderer
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a1120);
 
+        // Đặt camera góc nhìn thoáng và hạ thấp điểm nhìn chuẩn trung tâm
         const camera = new THREE.PerspectiveCamera(40, width / h, 0.1, 50);
-        camera.position.set(0, 1.8, 5.2);
-        camera.lookAt(0, 1.0, 0);
+        camera.position.set(0, 1.4, 4.4);
+        camera.lookAt(0, 0.75, 0);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, h);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // Ánh sáng
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+        const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.3);
         dirLight.position.set(3, 5, 4);
         scene.add(dirLight);
 
@@ -105,100 +103,106 @@
         backLight.position.set(-3, 3, -3);
         scene.add(backLight);
 
-        // Lưới sàn phòng tập 3D
+        // Lưới sàn 3D
         const grid = new THREE.GridHelper(6, 12, 0x0284c7, 0x1e293b);
-        grid.position.y = 0;
+        grid.position.y = -0.05;
         scene.add(grid);
 
-        // Chất liệu cho nhân vật
-        const matBody = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.1 });
+        // Chất liệu
+        const matBody = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
         const matJoint = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2 });
         const matHead = new THREE.MeshStandardMaterial({ color: 0xfcd34d, roughness: 0.3 });
         const matLimb = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4 });
         const matProp = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
 
-        // Tạo nhóm nhân vật gốc
-        const character = new THREE.Group();
-        scene.add(character);
+        // TẬP HỢP TÂM XOAY TƯƠNG TÁC (Pivot Group)
+        const pivotGroup = new THREE.Group();
+        pivotGroup.position.set(0, 0.75, 0); // Đặt tâm xoay đúng vị trí nhìn của Camera
+        scene.add(pivotGroup);
 
-        // Đầu
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), matHead);
-        head.position.y = 2.05;
+        const character = new THREE.Group();
+        character.position.set(0, -0.75, 0); // Bù trừ để sàn về y = 0
+        pivotGroup.add(character);
+
+        // CẤU TRÚC CƠ THỂ
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), matHead);
+        head.position.y = 1.95;
         character.add(head);
 
-        // Thân trên (Torso)
-        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.18, 0.7, 16), matBody);
-        torso.position.y = 1.45;
+        const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.65, 16), matBody);
+        torso.position.y = 1.4;
         character.add(torso);
 
-        // Khớp vai & Khớp háng
-        const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), matJoint);
-        shoulderR.position.set(0.35, 1.7, 0);
-        character.add(shoulderR);
-
-        const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 12), matJoint);
-        shoulderL.position.set(-0.35, 1.7, 0);
-        character.add(shoulderL);
-
-        const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 8), matLimb);
-        armR.position.set(0.38, 1.35, 0);
+        // Vai & Tay
+        const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8), matLimb);
+        armR.position.set(0.35, 1.35, 0);
         character.add(armR);
 
-        const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.6, 8), matLimb);
-        armL.position.set(-0.38, 1.35, 0);
+        const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8), matLimb);
+        armL.position.set(-0.35, 1.35, 0);
         character.add(armL);
 
-        // Chân phải
+        // Chân
         const legRGroup = new THREE.Group();
-        legRGroup.position.set(0.18, 1.1, 0);
-        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.95, 8), matLimb);
-        legR.position.y = -0.48;
+        legRGroup.position.set(0.16, 1.05, 0);
+        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.9, 8), matLimb);
+        legR.position.y = -0.45;
         legRGroup.add(legR);
         character.add(legRGroup);
 
-        // Chân trái
         const legLGroup = new THREE.Group();
-        legLGroup.position.set(-0.18, 1.1, 0);
-        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.95, 8), matLimb);
-        legL.position.y = -0.48;
+        legLGroup.position.set(-0.16, 1.05, 0);
+        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.9, 8), matLimb);
+        legL.position.y = -0.45;
         legLGroup.add(legL);
         character.add(legLGroup);
 
-        // Bổ sung đạo cụ tương tác hình học (Tường hoặc Ghế) tùy theo bài tập
-        let propWall = null;
-        let propChair = null;
-
+        // Đạo cụ
         if (type === "wall") {
-          propWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.2, 2.5), matProp);
-          propWall.position.set(1.1, 1.6, 0);
-          scene.add(propWall);
+          const propWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.0, 2.5), matProp);
+          propWall.position.set(1.1, 1.5, 0);
+          character.add(propWall);
         } else if (type === "chair") {
-          propChair = new THREE.Group();
+          const propChair = new THREE.Group();
           const seat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.8), matProp);
-          seat.position.y = 0.7;
+          seat.position.y = 0.65;
           propChair.add(seat);
-          const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.8), matProp);
-          back.position.set(-0.36, 1.1, 0);
+          const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.8), matProp);
+          back.position.set(-0.36, 1.0, 0);
           propChair.add(back);
-          scene.add(propChair);
+          character.add(propChair);
         }
 
-        // Tương tác vuốt xoay 360 độ (Touch / Mouse)
+        // TƯƠNG TÁC VUỐT XOAY 360 ĐỘ CẢ NGANG LẪN DỌC
         let isDragging = false;
         let prevX = 0;
-        let rotSpeed = 0.007;
+        let prevY = 0;
+        let rotY = 0;
+        let rotX = 0;
 
         const onPointerDown = (e) => {
           isDragging = true;
           prevX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+          prevY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
         };
 
         const onPointerMove = (e) => {
           if (!isDragging) return;
           const curX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+          const curY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
           const deltaX = curX - prevX;
-          character.rotation.y += deltaX * rotSpeed;
+          const deltaY = curY - prevY;
+
+          rotY += deltaX * 0.009;
+          rotX += deltaY * 0.006;
+          // Khóa góc ngẩng/cúi để không bị lộn ngược camera
+          rotX = Math.max(-0.6, Math.min(0.8, rotX));
+
+          pivotGroup.rotation.y = rotY;
+          pivotGroup.rotation.x = rotX;
+
           prevX = curX;
+          prevY = curY;
         };
 
         const onPointerUp = () => { isDragging = false; };
@@ -211,7 +215,7 @@
         window.addEventListener("touchmove", onPointerMove, { passive: true });
         window.addEventListener("touchend", onPointerUp);
 
-        // Vòng lặp hoạt ảnh chuyển động 3D (Kinematic Animation Loop)
+        // VÒNG LẶP CHUYỂN ĐỘNG CHUẨN XÁC THEO TỪNG BÀI
         let clock = new THREE.Clock();
         let reqId = null;
 
@@ -219,48 +223,86 @@
           reqId = requestAnimationFrame(animate);
           const t = clock.getElapsedTime();
 
-          if (type === "squat") {
-            const squatCycle = (Math.sin(t * 2.2) + 1) / 2; // 0 -> 1
-            character.position.y = -squatCycle * 0.45;
+          if (type === "pike") {
+            // TƯ THẾ CHỮ V NGƯỢC (PIKE PUSH-UP) CHUẨN XÁC Ở GIỮA KHUNG HÌNH
+            character.position.set(0, -0.15, 0);
+            character.rotation.set(0, 0, 0);
+
+            const dip = (Math.sin(t * 2.4) + 1) / 2; // 0 -> 1
+
+            // Hông nâng cao ở giữa
+            torso.position.set(0, 0.95 - dip * 0.15, 0.2);
+            torso.rotation.x = 0.85; // Thân đổ dốc về trước
+
+            head.position.set(0, 0.55 - dip * 0.25, 0.55); // Đầu hạ sát sàn
+
+            // Tay chống thẳng sàn
+            armR.position.set(0.35, 0.45, 0.5);
+            armR.rotation.x = 0.3 - dip * 0.4;
+            armL.position.set(-0.35, 0.45, 0.5);
+            armL.rotation.x = 0.3 - dip * 0.4;
+
+            // Chân chống ra sau
+            legRGroup.position.set(0.16, 0.95, 0);
+            legRGroup.rotation.x = -0.55;
+            legLGroup.position.set(-0.16, 0.95, 0);
+            legLGroup.rotation.x = -0.55;
+
+          } else if (type === "pushup") {
+            // TƯ THẾ CHỐNG ĐẨY NẰM NGANG NÂNG LÊN CAO
+            character.position.set(0, 0.1, 0);
+            character.rotation.set(0, 0, 0);
+
+            const pushCycle = (Math.sin(t * 2.5) + 1) / 2;
+            torso.position.set(0, 0.55 - pushCycle * 0.2, 0);
+            torso.rotation.x = Math.PI / 2;
+
+            head.position.set(0, 0.55 - pushCycle * 0.2, 0.55);
+
+            armR.position.set(0.35, 0.35, 0.35);
+            armL.position.set(-0.35, 0.35, 0.35);
+
+            legRGroup.position.set(0.16, 0.55, -0.4);
+            legRGroup.rotation.x = -Math.PI / 2;
+            legLGroup.position.set(-0.16, 0.55, -0.4);
+            legLGroup.rotation.x = -Math.PI / 2;
+
+          } else if (type === "squat") {
+            character.position.set(0, -0.75, 0);
+            const squatCycle = (Math.sin(t * 2.2) + 1) / 2;
+            character.position.y = -0.75 - squatCycle * 0.4;
             legRGroup.rotation.x = -squatCycle * 0.8;
             legLGroup.rotation.x = -squatCycle * 0.8;
             armR.rotation.x = -squatCycle * 1.2;
             armL.rotation.x = -squatCycle * 1.2;
-            torso.rotation.x = squatCycle * 0.25;
-          } else if (type === "pushup" || type === "pike") {
-            character.rotation.z = 0;
-            character.position.y = -0.5;
-            character.rotation.x = Math.PI / 2.3;
-            const pushCycle = (Math.sin(t * 2.5) + 1) / 2;
-            torso.position.y = 1.45 - pushCycle * 0.2;
-            head.position.y = 2.05 - pushCycle * 0.25;
-          } else if (type === "walk" || type === "run") {
-            const speed = type === "run" ? 5 : 3;
-            legRGroup.rotation.x = Math.sin(t * speed) * 0.6;
-            legLGroup.rotation.x = -Math.sin(t * speed) * 0.6;
-            armR.rotation.x = -Math.sin(t * speed) * 0.7;
-            armL.rotation.x = Math.sin(t * speed) * 0.7;
-            character.position.y = Math.abs(Math.sin(t * speed)) * 0.08;
+            torso.rotation.x = squatCycle * 0.2;
+
           } else if (type === "chair") {
-            character.position.set(0, -0.1, 0);
+            character.position.set(0, -0.5, 0);
             legRGroup.rotation.x = -1.4;
             legLGroup.rotation.x = -1.4;
-            const stretch = Math.sin(t * 2) * 0.3;
+            const stretch = Math.sin(t * 2) * 0.25;
             torso.rotation.y = stretch;
             head.rotation.y = stretch;
+
           } else if (type === "wall") {
+            character.position.set(0.4, -0.65, 0);
             const wallSlide = (Math.sin(t * 2) + 1) / 2;
-            character.position.set(0.65, -wallSlide * 0.35, 0);
+            character.position.y = -0.65 - wallSlide * 0.3;
             legRGroup.rotation.x = -wallSlide * 0.6;
             legLGroup.rotation.x = -wallSlide * 0.6;
-            armR.rotation.z = Math.PI / 4 + wallSlide * 0.5;
-            armL.rotation.z = -Math.PI / 4 - wallSlide * 0.5;
+            armR.rotation.z = Math.PI / 4 + wallSlide * 0.4;
+            armL.rotation.z = -Math.PI / 4 - wallSlide * 0.4;
+
           } else {
-            // Mặc định: Giãn cơ hoặc Plank
-            character.rotation.x = Math.PI / 2.2;
-            character.position.y = -0.6;
-            const breath = Math.sin(t * 1.5) * 0.06;
-            torso.scale.set(1 + breath, 1, 1 + breath);
+            // Đi bộ hoặc chạy
+            character.position.set(0, -0.75, 0);
+            const speed = 3.5;
+            legRGroup.rotation.x = Math.sin(t * speed) * 0.6;
+            legLGroup.rotation.x = -Math.sin(t * speed) * 0.6;
+            armR.rotation.x = -Math.sin(t * speed) * 0.6;
+            armL.rotation.x = Math.sin(t * speed) * 0.6;
+            character.position.y = -0.75 + Math.abs(Math.sin(t * speed)) * 0.08;
           }
 
           renderer.render(scene, camera);
@@ -286,17 +328,17 @@
           <div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
           <div className="absolute top-2 left-2.5 pointer-events-none flex items-center gap-1.5">
             <span className="text-[10px] font-extrabold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md">
-              🧊 3D Procedural Engine
+              🧊 3D Auto-Centered
             </span>
           </div>
           <div className="absolute bottom-2 right-2.5 pointer-events-none text-[9.5px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-            👆 Vuốt xoay 360°
+            👆 Vuốt xoay 360° & ngẩng góc
           </div>
         </div>
       );
     };
 
-    // 3. DỮ LIỆU LỊCH TẬP 7 NGÀY
+    // 3. DỮ LIỆU BÀI TẬP
     const WORKOUT_PLAN = [
       {
         day: "Thứ 2",
@@ -315,19 +357,10 @@
             type: "pushup",
             muscle: "Ngực & Tay sau",
             steps: [
-              "STEP 1: Đặt 2 tay rộng bằng vai, giữ lưng - mông tạo thành trục thẳng.",
-              "STEP 2: Hạ ngực xuống chậm rãi, khép khuỷu tay 45 độ so với thân.",
+              "STEP 1: Chống hai tay lên mặt bàn hoặc sàn, lưng - mông tạo thành đường thẳng.",
+              "STEP 2: Hạ ngực chậm rãi xuống, khép khuỷu tay 45 độ.",
               "STEP 3: Đẩy mạnh thân người trở về vị trí ban đầu."
-            ],
-            alt: {
-              name: "Wall Push-up (Chống đẩy tường êm khớp)",
-              repsText: "15 lần",
-              steps: [
-                "STEP 1: Đứng cách tường 1 sải tay, hai bàn tay áp thẳng lên tường.",
-                "STEP 2: Gập nhẹ khuỷu tay ép ngực sát tường.",
-                "STEP 3: Dùng lực tay sau đẩy thẳng người về, bảo vệ cổ tay."
-              ]
-            }
+            ]
           },
           {
             id: "m2",
@@ -339,9 +372,9 @@
             type: "pike",
             muscle: "Cơ Vai & Lưng trên",
             steps: [
-              "STEP 1: Đẩy hông lên cao tạo góc chữ V ngược.",
-              "STEP 2: Hạ đỉnh đầu về phía trước hai bàn tay.",
-              "STEP 3: Đẩy ngược thân người về vị trí ban đầu."
+              "STEP 1: Đẩy hông lên cao tạo góc chữ V ngược, gót chân hơi nhón.",
+              "STEP 2: Gập khuỷu tay hạ đỉnh đầu xuống hướng về trước hai bàn tay.",
+              "STEP 3: Đẩy ngược thân người về lại vị trí đỉnh chữ V."
             ]
           },
           {
@@ -356,7 +389,7 @@
             steps: [
               "STEP 1: Đứng áp sát lưng, đầu và mông vào tường.",
               "STEP 2: Đưa hai tay tạo hình chữ W áp sát mặt tường.",
-              "STEP 3: Trượt thẳng hai tay lên cao thành hình chữ Y rồi kéo xuống."
+              "STEP 3: Trượt thẳng hai tay lên cao thành chữ Y rồi kéo xuống."
             ]
           }
         ]
@@ -366,7 +399,7 @@
         title: "Thân Dưới & Khớp Gối Linh Hoạt",
         duration: "35 phút",
         isRest: false,
-        focus: "Kích hoạt nhóm cơ mông - đùi bị ỳ sau nhiều giờ ngồi ghế",
+        focus: "Kích hoạt cơ mông - đùi bị ỳ sau nhiều giờ ngồi ghế",
         exercises: [
           {
             id: "tu1",
@@ -522,7 +555,6 @@
       }
     ];
 
-    // 4. DANH MỤC THỰC PHẨM PURIN (LOW-PURINE)
     const PURINE_DB = [
       { name: "Trứng gà, trứng vịt", level: "green", mg: "~1-5 mg", tip: "0% lo lắng về axit uric, nguồn đạm số 1 phục hồi cơ bắp." },
       { name: "Sữa tách béo / Sữa chua Hy Lạp", level: "green", mg: "0 mg", tip: "Protein trong sữa hỗ trợ thận tăng tốc đào thải axit uric." },
@@ -535,20 +567,19 @@
       const [activeTab, setActiveTab] = useState("workout");
       const [selectedDayIdx, setSelectedDayIdx] = useState(0);
       const [voiceEnabled, setVoiceEnabled] = useState(true);
-      const [viewMode3D, setViewMode3D] = useState(true); // Bật/tắt chế độ xem 3D
+      const [viewMode3D, setViewMode3D] = useState(true);
 
       const [stats, setStats] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("fitflow_stats_v42") || '{"xp":180,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 180, streak: 3, water: 5, doneIds: [] }; }
+        try { return JSON.parse(localStorage.getItem("fitflow_stats_v43") || '{"xp":180,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 180, streak: 3, water: 5, doneIds: [] }; }
       });
 
-      // Guided Player
       const [playerOpen, setPlayerOpen] = useState(false);
       const [playerExIdx, setPlayerExIdx] = useState(0);
       const [playerPhase, setPlayerPhase] = useState("prepare");
       const [playerSec, setPlayerSec] = useState(5);
       const [playerPaused, setPlayerPaused] = useState(false);
 
-      useEffect(() => { localStorage.setItem("fitflow_stats_v42", JSON.stringify(stats)); }, [stats]);
+      useEffect(() => { localStorage.setItem("fitflow_stats_v43", JSON.stringify(stats)); }, [stats]);
 
       const currentWorkout = WORKOUT_PLAN[selectedDayIdx];
 
@@ -560,7 +591,7 @@
         setPlayerPaused(false);
         setPlayerOpen(true);
         playBeep(880, 200);
-        speakVN(`Chuẩn bị vào bài tập: ${firstEx.name}`, voiceEnabled);
+        speakVN(`Chuẩn bị vào bài: ${firstEx.name}`, voiceEnabled);
       };
 
       useEffect(() => {
@@ -624,7 +655,7 @@
                     {stats.xp} XP
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Three.js Procedural • 60 FPS • Xoay 360°</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Three.js 3D Centered • Xoay & Ngẩng góc</p>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -648,7 +679,7 @@
             </div>
           </header>
 
-          {/* CHỌN THỨ TRONG TUẦN */}
+          {/* CHỌN NGÀY */}
           <div className="px-3 pt-2.5">
             <div className="grid grid-cols-7 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
               {WORKOUT_PLAN.map((d, idx) => (
@@ -668,11 +699,10 @@
             </div>
           </div>
 
-          {/* NỘI DUNG CHÍNH */}
+          {/* NỘI DUNG */}
           <main className="p-3 space-y-3.5 flex-1">
             {activeTab === "workout" && (
               <div className="space-y-3">
-                {/* Banner buổi tập */}
                 <div className="p-4 rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/60 border-slate-700/80 shadow-lg">
                   <div className="flex justify-between items-start">
                     <div>
@@ -689,11 +719,10 @@
                     onClick={startGuidedSession}
                     className="mt-3 w-full py-2.5 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
                   >
-                    <span>▶️ BẮT ĐẦU BUỔI TẬP 3D (CÓ 5S CHUẨN BỊ & XEM TRƯỚC BÀI SAU)</span>
+                    <span>▶️ BẮT ĐẦU BUỔI TẬP 3D (ĐÃ FIX TÂM XOAY)</span>
                   </button>
                 </div>
 
-                {/* Danh sách bài tập có Three.js 3D Canvas */}
                 {currentWorkout.exercises.map((ex) => {
                   const isDone = stats.doneIds.includes(ex.id);
                   return (
@@ -715,10 +744,8 @@
                         </button>
                       </div>
 
-                      {/* Khối Three.js 3D tương tác xoay 360 độ */}
-                      {viewMode3D && <ThreeExerciseCanvas type={ex.type} height={175} />}
+                      {viewMode3D && <ThreeExerciseCanvas type={ex.type} height={200} />}
 
-                      {/* Các bước hướng dẫn */}
                       <div className="mt-2.5 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
                         {ex.steps.map((st, i) => (
                           <p key={i} className="text-xs text-slate-300 leading-relaxed">{st}</p>
@@ -765,7 +792,7 @@
             )}
           </main>
 
-          {/* MÀN HÌNH WORKOUT PLAYER TOÀN MÀN HÌNH TÍCH HỢP 3D & PREPARE 5S */}
+          {/* MÀN HÌNH PLAYER TÍCH HỢP 3D VỪA VẶN TRUNG TÂM */}
           {playerOpen && (
             <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
               {playerPhase !== "finish" ? (
@@ -808,7 +835,7 @@
                         <p className="text-[11px] text-slate-300">🎯 Trọng tâm: {nextExItem.muscle}</p>
                       </div>
                     ) : (
-                      <ThreeExerciseCanvas type={activeCurrentEx.type} height={210} />
+                      <ThreeExerciseCanvas type={activeCurrentEx.type} height={230} />
                     )}
                   </div>
 
@@ -832,7 +859,7 @@
             </div>
           )}
 
-          {/* THANH ĐIỀU HƯỚNG DƯỚI ĐÁY */}
+          {/* THANH ĐIỀU HƯỚNG */}
           <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-bottom z-30">
             <div className="max-w-md mx-auto grid grid-cols-2 p-1.5 gap-1">
               <button onClick={() => setActiveTab("workout")} className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center ${activeTab === "workout" ? "bg-sky-600 text-white" : "text-slate-400"}`}>
