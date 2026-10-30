@@ -8,14 +8,14 @@
   <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro Max v4.3 - Fixed 3D Center</title>
+  <title>FitFlow Pro Max v4.4 - Perfect 3D Center</title>
 
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>🧊</text></svg>" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>🎯</text></svg>" />
 
   <!-- Three.js Core -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-  <!-- Tailwind & React -->
+  <!-- Tailwind CSS & React UI -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -68,8 +68,8 @@
       } catch (e) {}
     };
 
-    // 2. KHỐI THREE.JS 3D ĐÃ FIX TÂM XOAY, KHÔNG BỊ CHÌM VÀ KÉO ĐA HƯỚNG ĐƯỢC
-    const ThreeExerciseCanvas = ({ type = "squat", height = 210 }) => {
+    // KHỐI THREE.JS 3D ĐƯỢC THIẾT KẾ CĂN ĐÚNG TRUNG TÂM (CENTER OF MASS = 0, 0, 0)
+    const ThreeExerciseCanvas = ({ type = "squat", height = 230 }) => {
       const containerRef = useRef(null);
 
       useEffect(() => {
@@ -82,103 +82,98 @@
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0a1120);
 
-        // Đặt camera góc nhìn thoáng và hạ thấp điểm nhìn chuẩn trung tâm
-        const camera = new THREE.PerspectiveCamera(40, width / h, 0.1, 50);
-        camera.position.set(0, 1.4, 4.4);
-        camera.lookAt(0, 0.75, 0);
+        // Camera nhìn trực tiếp vào tâm (0, 0, 0)
+        const camera = new THREE.PerspectiveCamera(45, width / h, 0.1, 50);
+        camera.position.set(0, 0.8, 3.8);
+        camera.lookAt(0, 0, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, h);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.3);
-        dirLight.position.set(3, 5, 4);
+        // Ánh sáng
+        scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+        const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.4);
+        dirLight.position.set(3, 4, 4);
         scene.add(dirLight);
 
-        const backLight = new THREE.DirectionalLight(0x10b981, 0.6);
-        backLight.position.set(-3, 3, -3);
+        const backLight = new THREE.DirectionalLight(0x10b981, 0.7);
+        backLight.position.set(-3, 2, -3);
         scene.add(backLight);
 
-        // Lưới sàn 3D
+        // Sàn 3D đặt phía dưới nhân vật
         const grid = new THREE.GridHelper(6, 12, 0x0284c7, 0x1e293b);
-        grid.position.y = -0.05;
+        grid.position.y = -0.95;
         scene.add(grid);
 
         // Chất liệu
         const matBody = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3 });
-        const matJoint = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2 });
         const matHead = new THREE.MeshStandardMaterial({ color: 0xfcd34d, roughness: 0.3 });
         const matLimb = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.4 });
         const matProp = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.7 });
 
-        // TẬP HỢP TÂM XOAY TƯƠNG TÁC (Pivot Group)
-        const pivotGroup = new THREE.Group();
-        pivotGroup.position.set(0, 0.75, 0); // Đặt tâm xoay đúng vị trí nhìn của Camera
-        scene.add(pivotGroup);
+        // Nhóm xoay quanh tâm (0, 0, 0)
+        const pivot = new THREE.Group();
+        pivot.position.set(0, 0, 0);
+        scene.add(pivot);
 
         const character = new THREE.Group();
-        character.position.set(0, -0.75, 0); // Bù trừ để sàn về y = 0
-        pivotGroup.add(character);
+        pivot.add(character);
 
-        // CẤU TRÚC CƠ THỂ
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), matHead);
-        head.position.y = 1.95;
-        character.add(head);
-
+        // CẤU TRÚC NHÂN VẬT ĐƯỢC CĂN GIỮA TOÀN BỘ (HÔNG TẠI 0, 0, 0)
         const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.65, 16), matBody);
-        torso.position.y = 1.4;
+        torso.position.y = 0.25;
         character.add(torso);
 
-        // Vai & Tay
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), matHead);
+        head.position.y = 0.8;
+        character.add(head);
+
+        // Hai tay
         const armR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8), matLimb);
-        armR.position.set(0.35, 1.35, 0);
+        armR.position.set(0.35, 0.25, 0);
         character.add(armR);
 
         const armL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8), matLimb);
-        armL.position.set(-0.35, 1.35, 0);
+        armL.position.set(-0.35, 0.25, 0);
         character.add(armL);
 
-        // Chân
+        // Hai chân
         const legRGroup = new THREE.Group();
-        legRGroup.position.set(0.16, 1.05, 0);
-        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.9, 8), matLimb);
-        legR.position.y = -0.45;
+        legRGroup.position.set(0.16, -0.05, 0);
+        const legR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.85, 8), matLimb);
+        legR.position.y = -0.42;
         legRGroup.add(legR);
         character.add(legRGroup);
 
         const legLGroup = new THREE.Group();
-        legLGroup.position.set(-0.16, 1.05, 0);
-        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.9, 8), matLimb);
-        legL.position.y = -0.45;
+        legLGroup.position.set(-0.16, -0.05, 0);
+        const legL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.85, 8), matLimb);
+        legL.position.y = -0.42;
         legLGroup.add(legL);
         character.add(legLGroup);
 
-        // Đạo cụ
+        // Đạo cụ Tường / Ghế
         if (type === "wall") {
-          const propWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.0, 2.5), matProp);
-          propWall.position.set(1.1, 1.5, 0);
-          character.add(propWall);
+          const wall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.5, 2.0), matProp);
+          wall.position.set(0.85, 0.3, 0);
+          character.add(wall);
         } else if (type === "chair") {
-          const propChair = new THREE.Group();
-          const seat = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.08, 0.8), matProp);
-          seat.position.y = 0.65;
-          propChair.add(seat);
-          const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.7, 0.8), matProp);
-          back.position.set(-0.36, 1.0, 0);
-          propChair.add(back);
-          character.add(propChair);
+          const chairGroup = new THREE.Group();
+          const seat = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.7), matProp);
+          seat.position.set(0, -0.2, 0);
+          chairGroup.add(seat);
+          const back = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.7), matProp);
+          back.position.set(-0.32, 0.15, 0);
+          chairGroup.add(back);
+          character.add(chairGroup);
         }
 
-        // TƯƠNG TÁC VUỐT XOAY 360 ĐỘ CẢ NGANG LẪN DỌC
+        // TƯƠNG TÁC XOAY CẢ NGANG LẪN DỌC
         let isDragging = false;
-        let prevX = 0;
-        let prevY = 0;
-        let rotY = 0;
-        let rotX = 0;
+        let prevX = 0, prevY = 0;
+        let rotY = 0, rotX = 0;
 
         const onPointerDown = (e) => {
           isDragging = true;
@@ -190,16 +185,13 @@
           if (!isDragging) return;
           const curX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
           const curY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-          const deltaX = curX - prevX;
-          const deltaY = curY - prevY;
 
-          rotY += deltaX * 0.009;
-          rotX += deltaY * 0.006;
-          // Khóa góc ngẩng/cúi để không bị lộn ngược camera
-          rotX = Math.max(-0.6, Math.min(0.8, rotX));
+          rotY += (curX - prevX) * 0.01;
+          rotX += (curY - prevY) * 0.008;
+          rotX = Math.max(-0.6, Math.min(0.7, rotX)); // Khóa biên độ nhìn trên dưới
 
-          pivotGroup.rotation.y = rotY;
-          pivotGroup.rotation.x = rotX;
+          pivot.rotation.y = rotY;
+          pivot.rotation.x = rotX;
 
           prevX = curX;
           prevY = curY;
@@ -215,7 +207,7 @@
         window.addEventListener("touchmove", onPointerMove, { passive: true });
         window.addEventListener("touchend", onPointerUp);
 
-        // VÒNG LẶP CHUYỂN ĐỘNG CHUẨN XÁC THEO TỪNG BÀI
+        // HOẠT ẢNH CHUẨN XÁC NẰM GỌN TRONG KHUNG
         let clock = new THREE.Clock();
         let reqId = null;
 
@@ -224,85 +216,71 @@
           const t = clock.getElapsedTime();
 
           if (type === "pike") {
-            // TƯ THẾ CHỮ V NGƯỢC (PIKE PUSH-UP) CHUẨN XÁC Ở GIỮA KHUNG HÌNH
-            character.position.set(0, -0.15, 0);
-            character.rotation.set(0, 0, 0);
+            // TƯ THẾ CHỮ V (PIKE PUSH-UP) NẰM CHÍNH GIỮA MÀN HÌNH
+            const dip = (Math.sin(t * 2.5) + 1) / 2;
+            character.position.set(0, 0.15 - dip * 0.1, 0);
+            torso.position.set(0, 0.1, 0.1);
+            torso.rotation.x = 0.85; // Đổ người dốc xuống
 
-            const dip = (Math.sin(t * 2.4) + 1) / 2; // 0 -> 1
+            head.position.set(0, -0.25 - dip * 0.2, 0.45);
+            armR.position.set(0.35, -0.25, 0.35);
+            armR.rotation.x = 0.2 - dip * 0.4;
+            armL.position.set(-0.35, -0.25, 0.35);
+            armL.rotation.x = 0.2 - dip * 0.4;
 
-            // Hông nâng cao ở giữa
-            torso.position.set(0, 0.95 - dip * 0.15, 0.2);
-            torso.rotation.x = 0.85; // Thân đổ dốc về trước
-
-            head.position.set(0, 0.55 - dip * 0.25, 0.55); // Đầu hạ sát sàn
-
-            // Tay chống thẳng sàn
-            armR.position.set(0.35, 0.45, 0.5);
-            armR.rotation.x = 0.3 - dip * 0.4;
-            armL.position.set(-0.35, 0.45, 0.5);
-            armL.rotation.x = 0.3 - dip * 0.4;
-
-            // Chân chống ra sau
-            legRGroup.position.set(0.16, 0.95, 0);
+            legRGroup.position.set(0.16, 0.2, -0.1);
             legRGroup.rotation.x = -0.55;
-            legLGroup.position.set(-0.16, 0.95, 0);
+            legLGroup.position.set(-0.16, 0.2, -0.1);
             legLGroup.rotation.x = -0.55;
 
           } else if (type === "pushup") {
-            // TƯ THẾ CHỐNG ĐẨY NẰM NGANG NÂNG LÊN CAO
-            character.position.set(0, 0.1, 0);
-            character.rotation.set(0, 0, 0);
-
-            const pushCycle = (Math.sin(t * 2.5) + 1) / 2;
-            torso.position.set(0, 0.55 - pushCycle * 0.2, 0);
+            // TƯ THẾ CHỐNG ĐẨY NẰM NGANG CHÍNH TÂM
+            const push = (Math.sin(t * 2.5) + 1) / 2;
+            character.position.set(0, 0.1 - push * 0.15, 0);
+            torso.position.set(0, 0, 0);
             torso.rotation.x = Math.PI / 2;
 
-            head.position.set(0, 0.55 - pushCycle * 0.2, 0.55);
+            head.position.set(0, 0, 0.55);
+            armR.position.set(0.35, -0.15, 0.3);
+            armL.position.set(-0.35, -0.15, 0.3);
 
-            armR.position.set(0.35, 0.35, 0.35);
-            armL.position.set(-0.35, 0.35, 0.35);
-
-            legRGroup.position.set(0.16, 0.55, -0.4);
+            legRGroup.position.set(0.16, 0, -0.35);
             legRGroup.rotation.x = -Math.PI / 2;
-            legLGroup.position.set(-0.16, 0.55, -0.4);
+            legLGroup.position.set(-0.16, 0, -0.35);
             legLGroup.rotation.x = -Math.PI / 2;
 
           } else if (type === "squat") {
-            character.position.set(0, -0.75, 0);
-            const squatCycle = (Math.sin(t * 2.2) + 1) / 2;
-            character.position.y = -0.75 - squatCycle * 0.4;
-            legRGroup.rotation.x = -squatCycle * 0.8;
-            legLGroup.rotation.x = -squatCycle * 0.8;
-            armR.rotation.x = -squatCycle * 1.2;
-            armL.rotation.x = -squatCycle * 1.2;
-            torso.rotation.x = squatCycle * 0.2;
+            const sq = (Math.sin(t * 2.2) + 1) / 2;
+            character.position.set(0, -sq * 0.35, 0);
+            legRGroup.rotation.x = -sq * 0.75;
+            legLGroup.rotation.x = -sq * 0.75;
+            armR.rotation.x = -sq * 1.1;
+            armL.rotation.x = -sq * 1.1;
+            torso.rotation.x = sq * 0.2;
 
           } else if (type === "chair") {
-            character.position.set(0, -0.5, 0);
-            legRGroup.rotation.x = -1.4;
-            legLGroup.rotation.x = -1.4;
-            const stretch = Math.sin(t * 2) * 0.25;
-            torso.rotation.y = stretch;
-            head.rotation.y = stretch;
+            character.position.set(0, -0.1, 0);
+            legRGroup.rotation.x = -1.35;
+            legLGroup.rotation.x = -1.35;
+            const twist = Math.sin(t * 2) * 0.3;
+            torso.rotation.y = twist;
+            head.rotation.y = twist;
 
           } else if (type === "wall") {
-            character.position.set(0.4, -0.65, 0);
-            const wallSlide = (Math.sin(t * 2) + 1) / 2;
-            character.position.y = -0.65 - wallSlide * 0.3;
-            legRGroup.rotation.x = -wallSlide * 0.6;
-            legLGroup.rotation.x = -wallSlide * 0.6;
-            armR.rotation.z = Math.PI / 4 + wallSlide * 0.4;
-            armL.rotation.z = -Math.PI / 4 - wallSlide * 0.4;
+            character.position.set(0.35, 0, 0);
+            const slide = (Math.sin(t * 2) + 1) / 2;
+            character.position.y = -slide * 0.25;
+            armR.rotation.z = Math.PI / 4 + slide * 0.35;
+            armL.rotation.z = -Math.PI / 4 - slide * 0.35;
 
           } else {
-            // Đi bộ hoặc chạy
-            character.position.set(0, -0.75, 0);
+            // Đi bộ nhẹ nhàng
             const speed = 3.5;
-            legRGroup.rotation.x = Math.sin(t * speed) * 0.6;
-            legLGroup.rotation.x = -Math.sin(t * speed) * 0.6;
-            armR.rotation.x = -Math.sin(t * speed) * 0.6;
-            armL.rotation.x = Math.sin(t * speed) * 0.6;
-            character.position.y = -0.75 + Math.abs(Math.sin(t * speed)) * 0.08;
+            legRGroup.rotation.x = Math.sin(t * speed) * 0.55;
+            legLGroup.rotation.x = -Math.sin(t * speed) * 0.55;
+            armR.rotation.x = -Math.sin(t * speed) * 0.55;
+            armL.rotation.x = Math.sin(t * speed) * 0.55;
+            character.position.y = Math.abs(Math.sin(t * speed)) * 0.06;
           }
 
           renderer.render(scene, camera);
@@ -324,21 +302,21 @@
       }, [type, height]);
 
       return (
-        <div className="relative w-full rounded-2xl overflow-hidden border border-sky-900/60 shadow-inner bg-slate-950">
+        <div className="relative w-full rounded-2xl overflow-hidden border border-sky-800/80 shadow-2xl bg-slate-950">
           <div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
-          <div className="absolute top-2 left-2.5 pointer-events-none flex items-center gap-1.5">
-            <span className="text-[10px] font-extrabold uppercase bg-sky-500/20 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-md">
-              🧊 3D Auto-Centered
+          <div className="absolute top-2.5 left-2.5 pointer-events-none">
+            <span className="text-[10px] font-extrabold uppercase bg-sky-500/25 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded-md backdrop-blur">
+              🎯 3D Perfect Center
             </span>
           </div>
-          <div className="absolute bottom-2 right-2.5 pointer-events-none text-[9.5px] text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-            👆 Vuốt xoay 360° & ngẩng góc
+          <div className="absolute bottom-2.5 right-2.5 pointer-events-none text-[9.5px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700 backdrop-blur">
+            👆 Vuốt xoay 360°
           </div>
         </div>
       );
     };
 
-    // 3. DỮ LIỆU BÀI TẬP
+    // DỮ LIỆU LỊCH TẬP 7 NGÀY
     const WORKOUT_PLAN = [
       {
         day: "Thứ 2",
@@ -357,8 +335,8 @@
             type: "pushup",
             muscle: "Ngực & Tay sau",
             steps: [
-              "STEP 1: Chống hai tay lên mặt bàn hoặc sàn, lưng - mông tạo thành đường thẳng.",
-              "STEP 2: Hạ ngực chậm rãi xuống, khép khuỷu tay 45 độ.",
+              "STEP 1: Chống 2 tay lên mặt bàn hoặc sàn, lưng - mông tạo thành đường thẳng.",
+              "STEP 2: Hạ ngực xuống chậm rãi, khép khuỷu tay 45 độ so với thân.",
               "STEP 3: Đẩy mạnh thân người trở về vị trí ban đầu."
             ]
           },
@@ -414,21 +392,6 @@
               "STEP 1: Hai chân mở rộng bằng vai, mũi chân mở 15 độ.",
               "STEP 2: Đẩy hông ra sau và hạ đùi song song mặt sàn.",
               "STEP 3: Đạp gót đứng thẳng dậy, siết chặt cơ mông."
-            ]
-          },
-          {
-            id: "tu2",
-            name: "Wall Glute Bridge (Cầu mông đạp tường)",
-            baseSets: 3,
-            repsText: "15 lần",
-            workSec: 45,
-            rest: 45,
-            type: "wall",
-            muscle: "Mông & Đùi sau",
-            steps: [
-              "STEP 1: Nằm ngửa gác hai bàn chân lên tường vuông góc 90 độ.",
-              "STEP 2: Siết cơ mông cuộn từng đốt sống đẩy hông lên cao.",
-              "STEP 3: Giữ 2 giây ở đỉnh rồi hạ chậm xuống sàn."
             ]
           }
         ]
@@ -555,22 +518,13 @@
       }
     ];
 
-    const PURINE_DB = [
-      { name: "Trứng gà, trứng vịt", level: "green", mg: "~1-5 mg", tip: "0% lo lắng về axit uric, nguồn đạm số 1 phục hồi cơ bắp." },
-      { name: "Sữa tách béo / Sữa chua Hy Lạp", level: "green", mg: "0 mg", tip: "Protein trong sữa hỗ trợ thận tăng tốc đào thải axit uric." },
-      { name: "Đậu phụ / Đậu hũ", level: "green", mg: "~20-35 mg", tip: "Đạm thực vật tinh khiết lành tính cho người gout/axit uric cao." },
-      { name: "Ức gà (đã luộc chần bỏ nước đầu)", level: "yellow", mg: "~130 mg", tip: "Ăn 80-100g/bữa, luôn bỏ nước luộc để loại bỏ purin hòa tan." },
-      { name: "Thịt bò, Hải sản có vỏ, Lòng mề", level: "red", mg: ">250 mg", tip: "Cần kiêng triệt để trong giai đoạn chỉ số axit uric đang cao." }
-    ];
-
     function App() {
       const [activeTab, setActiveTab] = useState("workout");
       const [selectedDayIdx, setSelectedDayIdx] = useState(0);
       const [voiceEnabled, setVoiceEnabled] = useState(true);
-      const [viewMode3D, setViewMode3D] = useState(true);
 
       const [stats, setStats] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("fitflow_stats_v43") || '{"xp":180,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 180, streak: 3, water: 5, doneIds: [] }; }
+        try { return JSON.parse(localStorage.getItem("fitflow_stats_v44") || '{"xp":200,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 200, streak: 3, water: 5, doneIds: [] }; }
       });
 
       const [playerOpen, setPlayerOpen] = useState(false);
@@ -579,7 +533,7 @@
       const [playerSec, setPlayerSec] = useState(5);
       const [playerPaused, setPlayerPaused] = useState(false);
 
-      useEffect(() => { localStorage.setItem("fitflow_stats_v43", JSON.stringify(stats)); }, [stats]);
+      useEffect(() => { localStorage.setItem("fitflow_stats_v44", JSON.stringify(stats)); }, [stats]);
 
       const currentWorkout = WORKOUT_PLAN[selectedDayIdx];
 
@@ -642,12 +596,11 @@
 
       return (
         <div className="max-w-md mx-auto min-h-screen flex flex-col justify-between bg-slate-950 text-slate-100 pb-24">
-          {/* HEADER */}
           <header className="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-3.5 py-2.5 safe-top">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h1 className="text-base font-extrabold text-sky-400">FitFlow 3D</h1>
+                  <h1 className="text-base font-extrabold text-sky-400">FitFlow v4.4</h1>
                   <span className="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold">
                     🔥 {stats.streak} Ngày
                   </span>
@@ -655,31 +608,20 @@
                     {stats.xp} XP
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Three.js 3D Centered • Xoay & Ngẩng góc</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Three.js Căn Giữa Hoàn Hảo • 60 FPS</p>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setViewMode3D(!viewMode3D)}
-                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-bold ${
-                    viewMode3D ? "bg-sky-600 text-white border-sky-400" : "bg-slate-800 text-slate-400 border-slate-700"
-                  }`}
-                >
-                  {viewMode3D ? "🧊 3D: BẬT" : "2D"}
-                </button>
-                <button
-                  onClick={() => setVoiceEnabled(!voiceEnabled)}
-                  className={`text-[11px] px-2.5 py-1 rounded-xl border font-bold ${
-                    voiceEnabled ? "bg-emerald-600 text-white border-emerald-400" : "bg-slate-800 text-slate-400 border-slate-700"
-                  }`}
-                >
-                  {voiceEnabled ? "🔊" : "🔇"}
-                </button>
-              </div>
+              <button
+                onClick={() => setVoiceEnabled(!voiceEnabled)}
+                className={`text-[11px] px-2.5 py-1 rounded-xl border font-bold ${
+                  voiceEnabled ? "bg-emerald-600 text-white border-emerald-400" : "bg-slate-800 text-slate-400 border-slate-700"
+                }`}
+              >
+                {voiceEnabled ? "🔊 Giọng HLV: BẬT" : "🔇 TẮT"}
+              </button>
             </div>
           </header>
 
-          {/* CHỌN NGÀY */}
           <div className="px-3 pt-2.5">
             <div className="grid grid-cols-7 gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800">
               {WORKOUT_PLAN.map((d, idx) => (
@@ -699,100 +641,61 @@
             </div>
           </div>
 
-          {/* NỘI DUNG */}
           <main className="p-3 space-y-3.5 flex-1">
-            {activeTab === "workout" && (
-              <div className="space-y-3">
-                <div className="p-4 rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/60 border-slate-700/80 shadow-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <span className="text-xs font-bold text-sky-400 uppercase">{currentWorkout.day} • {currentWorkout.duration}</span>
-                      <h2 className="text-base font-extrabold mt-0.5">{currentWorkout.title}</h2>
-                    </div>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold">
-                      {currentWorkout.exercises.length} Động tác
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-300 mt-1">🎯 {currentWorkout.focus}</p>
-
-                  <button
-                    onClick={startGuidedSession}
-                    className="mt-3 w-full py-2.5 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
-                  >
-                    <span>▶️ BẮT ĐẦU BUỔI TẬP 3D (ĐÃ FIX TÂM XOAY)</span>
-                  </button>
+            <div className="p-4 rounded-2xl border bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950/60 border-slate-700/80 shadow-lg">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-xs font-bold text-sky-400 uppercase">{currentWorkout.day} • {currentWorkout.duration}</span>
+                  <h2 className="text-base font-extrabold mt-0.5">{currentWorkout.title}</h2>
                 </div>
-
-                {currentWorkout.exercises.map((ex) => {
-                  const isDone = stats.doneIds.includes(ex.id);
-                  return (
-                    <div key={ex.id} className={`p-3.5 rounded-2xl border transition ${isDone ? "bg-emerald-950/20 border-emerald-700/60" : "bg-slate-900 border-slate-800"}`}>
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div>
-                          <h3 className="font-bold text-sm text-white">{ex.name}</h3>
-                          <p className="text-xs text-sky-400 font-semibold mt-0.5">{ex.baseSets} hiệp × {ex.repsText} • Nghỉ {ex.rest}s</p>
-                        </div>
-                        <button
-                          onClick={() => setStats(p => ({
-                            ...p,
-                            xp: isDone ? p.xp - 15 : p.xp + 20,
-                            doneIds: isDone ? p.doneIds.filter(i => i !== ex.id) : [...p.doneIds, ex.id]
-                          }))}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-bold ${isDone ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-300 border border-slate-700"}`}
-                        >
-                          {isDone ? "✓ Xong" : "Hoàn thành"}
-                        </button>
-                      </div>
-
-                      {viewMode3D && <ThreeExerciseCanvas type={ex.type} height={200} />}
-
-                      <div className="mt-2.5 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
-                        {ex.steps.map((st, i) => (
-                          <p key={i} className="text-xs text-slate-300 leading-relaxed">{st}</p>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded-full font-semibold">
+                  {currentWorkout.exercises.length} Động tác
+                </span>
               </div>
-            )}
+              <p className="text-xs text-slate-300 mt-1">🎯 {currentWorkout.focus}</p>
 
-            {activeTab === "diet" && (
-              <div className="space-y-3">
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800">
-                  <div className="flex justify-between items-center">
+              <button
+                onClick={startGuidedSession}
+                className="mt-3 w-full py-2.5 bg-gradient-to-r from-sky-500 to-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl shadow-md flex items-center justify-center gap-2"
+              >
+                <span>▶️ BẮT ĐẦU BUỔI TẬP 3D (ĐÃ CĂN ĐÚNG TRUNG TÂM)</span>
+              </button>
+            </div>
+
+            {currentWorkout.exercises.map((ex) => {
+              const isDone = stats.doneIds.includes(ex.id);
+              return (
+                <div key={ex.id} className={`p-3.5 rounded-2xl border transition ${isDone ? "bg-emerald-950/20 border-emerald-700/60" : "bg-slate-900 border-slate-800"}`}>
+                  <div className="flex justify-between items-start gap-2 mb-2">
                     <div>
-                      <h3 className="font-bold text-sm text-sky-400">💧 Nước lọc đào thải Axit Uric</h3>
-                      <p className="text-xs text-slate-400">Mục tiêu: 11 cốc (2.75 Lít/ngày)</p>
+                      <h3 className="font-bold text-sm text-white">{ex.name}</h3>
+                      <p className="text-xs text-sky-400 font-semibold mt-0.5">{ex.baseSets} hiệp × {ex.repsText} • Nghỉ {ex.rest}s</p>
                     </div>
-                    <span className="text-lg font-extrabold text-white">{stats.water} / 11 cốc</span>
+                    <button
+                      onClick={() => setStats(p => ({
+                        ...p,
+                        xp: isDone ? p.xp - 15 : p.xp + 20,
+                        doneIds: isDone ? p.doneIds.filter(i => i !== ex.id) : [...p.doneIds, ex.id]
+                      }))}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${isDone ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-300 border border-slate-700"}`}
+                    >
+                      {isDone ? "✓ Xong" : "Hoàn thành"}
+                    </button>
                   </div>
-                  <div className="w-full bg-slate-800 h-2 rounded-full mt-2 overflow-hidden">
-                    <div className="bg-sky-500 h-full" style={{ width: `${Math.min(100, (stats.water / 11) * 100)}%` }} />
-                  </div>
-                  <div className="flex gap-2 mt-3">
-                    <button onClick={() => setStats(s => ({ ...s, water: Math.max(0, s.water - 1) }))} className="px-3 py-2 bg-slate-800 rounded-xl text-xs font-bold">-1</button>
-                    <button onClick={() => { setStats(s => ({ ...s, water: s.water + 1, xp: s.xp + 5 })); playBeep(880, 100); }} className="flex-1 py-2 bg-sky-600 rounded-xl text-xs font-bold text-white">+ Uống 1 cốc 250ml (+5 XP)</button>
-                  </div>
-                </div>
 
-                <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 space-y-2">
-                  <h3 className="font-bold text-sm text-emerald-400">🥗 Thực phẩm An Toàn cho Người Axit Uric Cao</h3>
-                  {PURINE_DB.map((f, i) => (
-                    <div key={i} className="p-2.5 bg-slate-950 rounded-xl border border-slate-800 flex justify-between items-center text-xs">
-                      <div>
-                        <b className="text-white">{f.name}</b>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{f.tip}</p>
-                      </div>
-                      <span className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono shrink-0 ml-2">{f.mg}</span>
-                    </div>
-                  ))}
+                  <ThreeExerciseCanvas type={ex.type} height={210} />
+
+                  <div className="mt-2.5 space-y-1 bg-slate-950/75 p-2.5 rounded-xl border border-slate-800/80">
+                    {ex.steps.map((st, i) => (
+                      <p key={i} className="text-xs text-slate-300 leading-relaxed">{st}</p>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })}
           </main>
 
-          {/* MÀN HÌNH PLAYER TÍCH HỢP 3D VỪA VẶN TRUNG TÂM */}
+          {/* MÀN HÌNH PLAYER TOÀN MÀN HÌNH */}
           {playerOpen && (
             <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
               {playerPhase !== "finish" ? (
@@ -835,7 +738,7 @@
                         <p className="text-[11px] text-slate-300">🎯 Trọng tâm: {nextExItem.muscle}</p>
                       </div>
                     ) : (
-                      <ThreeExerciseCanvas type={activeCurrentEx.type} height={230} />
+                      <ThreeExerciseCanvas type={activeCurrentEx.type} height={240} />
                     )}
                   </div>
 
@@ -849,27 +752,13 @@
                 <div className="my-auto text-center space-y-4 p-2">
                   <div className="text-5xl">🏆</div>
                   <h2 className="text-xl font-extrabold text-emerald-400">Hoàn Thành Buổi Tập 3D!</h2>
-                  <p className="text-xs text-slate-300">Hôm nay cơ thể và các khớp của bạn cảm thấy thế nào?</p>
                   <div className="space-y-2 pt-2">
-                    <button onClick={() => { setStats(p => ({ ...p, xp: p.xp + 50, streak: p.streak + 1 })); setPlayerOpen(false); }} className="w-full py-3 bg-emerald-600/20 border border-emerald-500/40 rounded-2xl text-xs font-bold text-emerald-300">💪 Rất sảng khoái, êm khớp (+50 XP)</button>
-                    <button onClick={() => setPlayerOpen(false)} className="w-full py-3 bg-slate-800 rounded-2xl text-xs font-bold text-slate-300">Đóng</button>
+                    <button onClick={() => { setStats(p => ({ ...p, xp: p.xp + 50, streak: p.streak + 1 })); setPlayerOpen(false); }} className="w-full py-3 bg-emerald-600/20 border border-emerald-500/40 rounded-2xl text-xs font-bold text-emerald-300">💪 Hoàn tất (+50 XP)</button>
                   </div>
                 </div>
               )}
             </div>
           )}
-
-          {/* THANH ĐIỀU HƯỚNG */}
-          <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 safe-bottom z-30">
-            <div className="max-w-md mx-auto grid grid-cols-2 p-1.5 gap-1">
-              <button onClick={() => setActiveTab("workout")} className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center ${activeTab === "workout" ? "bg-sky-600 text-white" : "text-slate-400"}`}>
-                <span>🏋️ Lịch Tập 3D</span>
-              </button>
-              <button onClick={() => setActiveTab("diet")} className={`py-2 rounded-xl text-xs font-bold flex flex-col items-center ${activeTab === "diet" ? "bg-sky-600 text-white" : "text-slate-400"}`}>
-                <span>🥗 Axit Uric & Nước</span>
-              </button>
-            </div>
-          </nav>
         </div>
       );
     }
