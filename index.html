@@ -5,34 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
+  <meta name="apple-mobile-web-app-title" content="FitFlow" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro Max v5.4 - Force Cache Clear & 3D</title>
-
-  <link rel="manifest" href="./manifest.json" />
-  <!-- TỰ ĐỘNG GỠ CACHE SERVICE WORKER CŨ ĐỂ LUÔN NHẬN CODE MỚI NHẤT -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (let registration of registrations) {
-          registration.unregister();
-        }
-      });
-      if (window.caches) {
-        caches.keys().then(function(names) {
-          for (let name of names) caches.delete(name);
-        });
-      }
-    }
-  </script>
+  <title>FitFlow - Luyện Tập & Dinh Dưỡng</title>
 
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23090d16'/><text y='68' x='50' text-anchor='middle' font-size='55'>⚡</text></svg>" />
-
-  <!-- Thư viện Three.js, GLTFLoader & DRACOLoader (Giải mã mọi file GLB nén) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <!-- Tailwind CSS & React UI -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -52,7 +30,6 @@
     .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
     .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
-    canvas { touch-action: none; }
     @keyframes pulse-ring {
       0% { transform: scale(0.96); opacity: 0.85; }
       50% { transform: scale(1.03); opacity: 1; }
@@ -65,15 +42,9 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useRef } = React;
+    const { useState, useEffect, useMemo } = React;
 
-    // DANH SÁCH ĐƯỜNG DẪN 3D TỰ ĐỘNG THỬ LẦN LƯỢT (NẾU LINK 1 LỖI TỰ CHUYỂN SANG LINK 2, LINK 3)
-    const MODEL_URLS = [
-      "https://anhphamtuan028-prog.github.io/Fitflow/model.glb",
-      "https://cdn.jsdelivr.net/gh/anhphamtuan028-prog/Fitflow@main/model.glb",
-      "https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb"
-    ];
-
+    // ÂM THANH BÍP BÁO NHỊP
     const playBeep = (freq = 880, duration = 180, type = "sine") => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -89,6 +60,7 @@
       } catch (e) {}
     };
 
+    // GIỌNG NÓI TIẾNG VIỆT
     const speakVN = (text, enabled = true) => {
       if (!enabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
       try {
@@ -100,210 +72,7 @@
       } catch (e) {}
     };
 
-    // COMPONENT 3D THÔNG MINH: HỖ TRỢ DRACO + TỰ ĐỘNG THỬ CÁC NGUỒN + CHỌN FILE TỪ MÁY
-    const ThreeGLTFViewer = ({ customUrl = null, height = 240 }) => {
-      const containerRef = useRef(null);
-      const [status, setStatus] = useState("loading");
-      const [activeSourceLabel, setActiveSourceLabel] = useState("Đang kết nối 3D...");
-      const [localBlobUrl, setLocalBlobUrl] = useState(null);
-
-      useEffect(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        let isMounted = true;
-        let mixer = null;
-        let reqId = null;
-
-        const width = container.clientWidth || 340;
-        const h = height;
-
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a1120);
-
-        const camera = new THREE.PerspectiveCamera(45, width / h, 0.1, 100);
-        camera.position.set(0, 1.1, 3.3);
-        camera.lookAt(0, 0, 0);
-
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(width, h);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        container.innerHTML = "";
-        container.appendChild(renderer.domElement);
-
-        scene.add(new THREE.AmbientLight(0xffffff, 0.95));
-        const dirLight = new THREE.DirectionalLight(0xffffff, 1.3);
-        dirLight.position.set(3, 5, 4);
-        scene.add(dirLight);
-
-        const grid = new THREE.GridHelper(6, 12, 0x334155, 0x1e293b);
-        grid.position.y = -0.95;
-        scene.add(grid);
-
-        const pivot = new THREE.Group();
-        scene.add(pivot);
-
-        const tryLoadFromList = (urlList, idx = 0) => {
-          if (!isMounted) return;
-          if (!window.THREE || !window.THREE.GLTFLoader) {
-            setTimeout(() => tryLoadFromList(urlList, idx), 150);
-            return;
-          }
-
-          const currentUrl = urlList[idx];
-          const loader = new window.THREE.GLTFLoader();
-
-          // Gắn bộ giải mã Draco phòng trường hợp file GLB bị nén
-          if (window.THREE.DRACOLoader) {
-            const dracoLoader = new window.THREE.DRACOLoader();
-            dracoLoader.setDecoderPath("https://www.gstatic.com/draco/v1/decoders/");
-            loader.setDRACOLoader(dracoLoader);
-          }
-
-          loader.load(
-            currentUrl,
-            (gltf) => {
-              if (!isMounted) return;
-              while (pivot.children.length > 0) pivot.remove(pivot.children[0]);
-
-              const model = gltf.scene;
-              const box = new THREE.Box3().setFromObject(model);
-              const size = box.getSize(new THREE.Vector3());
-              const center = box.getCenter(new THREE.Vector3());
-
-              const maxDim = Math.max(size.x, size.y, size.z);
-              const scale = 1.75 / (maxDim || 1);
-              model.scale.setScalar(scale);
-
-              model.position.x = -center.x * scale;
-              model.position.y = -center.y * scale;
-              model.position.z = -center.z * scale;
-
-              pivot.add(model);
-              setStatus("ready");
-
-              if (currentUrl.includes("RobotExpressive")) {
-                setActiveSourceLabel("🤖 3D Trainer (Fallback)");
-              } else {
-                setActiveSourceLabel("🧍 Mixamo 3D Active");
-              }
-
-              if (gltf.animations && gltf.animations.length > 0) {
-                mixer = new THREE.AnimationMixer(model);
-                const action = mixer.clipAction(gltf.animations[0]);
-                action.play();
-              }
-            },
-            undefined,
-            (err) => {
-              console.warn(`Nguồn 3D [${idx}] lỗi:`, currentUrl, err);
-              if (idx + 1 < urlList.length) {
-                tryLoadFromList(urlList, idx + 1);
-              } else {
-                if (isMounted) setStatus("error");
-              }
-            }
-          );
-        };
-
-        const urlsToTry = localBlobUrl ? [localBlobUrl] : (customUrl ? [customUrl, ...MODEL_URLS] : MODEL_URLS);
-        setStatus("loading");
-        tryLoadFromList(urlsToTry, 0);
-
-        // Xoay 360 độ
-        let isDragging = false;
-        let prevX = 0, prevY = 0;
-        let rotY = 0, rotX = 0;
-
-        const onDown = (e) => {
-          isDragging = true;
-          prevX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-          prevY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-        };
-        const onMove = (e) => {
-          if (!isDragging) return;
-          const curX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-          const curY = e.clientY || (e.touches && e.touches[0].clientY) || 0;
-          rotY += (curX - prevX) * 0.01;
-          rotX += (curY - prevY) * 0.007;
-          rotX = Math.max(-0.5, Math.min(0.6, rotX));
-          pivot.rotation.y = rotY;
-          pivot.rotation.x = rotX;
-          prevX = curX;
-          prevY = curY;
-        };
-        const onUp = () => { isDragging = false; };
-
-        const dom = renderer.domElement;
-        dom.addEventListener("mousedown", onDown);
-        window.addEventListener("mousemove", onMove);
-        window.addEventListener("mouseup", onUp);
-        dom.addEventListener("touchstart", onDown, { passive: true });
-        window.addEventListener("touchmove", onMove, { passive: true });
-        window.addEventListener("touchend", onUp);
-
-        let clock = new THREE.Clock();
-        const animate = () => {
-          reqId = requestAnimationFrame(animate);
-          const delta = clock.getDelta();
-          if (mixer) mixer.update(delta);
-          renderer.render(scene, camera);
-        };
-        animate();
-
-        return () => {
-          isMounted = false;
-          cancelAnimationFrame(reqId);
-          dom.removeEventListener("mousedown", onDown);
-          window.removeEventListener("mousemove", onMove);
-          window.removeEventListener("mouseup", onUp);
-          dom.removeEventListener("touchstart", onDown);
-          window.removeEventListener("touchmove", onMove);
-          window.removeEventListener("touchend", onUp);
-          renderer.dispose();
-        };
-      }, [customUrl, localBlobUrl, height]);
-
-      const handleLocalFile = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          const url = URL.createObjectURL(file);
-          setLocalBlobUrl(url);
-        }
-      };
-
-      return (
-        <div className="relative w-full rounded-2xl overflow-hidden border border-slate-700 bg-slate-950 shadow-2xl mb-2.5">
-          <div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
-
-          {status === "loading" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur pointer-events-none">
-              <div className="w-6 h-6 border-2 border-sky-400 border-t-transparent rounded-full animate-spin mb-2"></div>
-              <span className="text-xs text-sky-300 font-semibold">Đang nạp mô hình 3D (v5.4)...</span>
-            </div>
-          )}
-
-          {status === "ready" && (
-            <>
-              <div className="absolute top-2.5 left-2.5 pointer-events-none">
-                <span className="text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-md backdrop-blur">
-                  {activeSourceLabel}
-                </span>
-              </div>
-              <label className="absolute top-2.5 right-2.5 text-[10px] bg-slate-800/90 hover:bg-slate-700 text-sky-300 border border-slate-600 px-2 py-0.5 rounded cursor-pointer">
-                📂 Đổi file .glb
-                <input type="file" accept=".glb,.gltf" onChange={handleLocalFile} className="hidden" />
-              </label>
-              <div className="absolute bottom-2.5 right-2.5 pointer-events-none text-[9.5px] text-slate-300 bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700">
-                👆 Vuốt xoay 360°
-              </div>
-            </>
-          )}
-        </div>
-      );
-    };
-
-    // SƠ ĐỒ 3 BƯỚC STEP 1-2-3
+    // SƠ ĐỒ ĐỒ HỌA CHUYỂN ĐỘNG TRỰC QUAN (SIÊU NHẸ - CHẠY 100% MƯỢT TRÊN MỌI MÁY)
     const StepDiagram = ({ type, isLive, muscleHighlight }) => {
       const [liveStep, setLiveStep] = useState(0);
 
@@ -318,7 +87,7 @@
       const renderPose = (stepIndex) => {
         if (type === "pike" || type === "pushup") {
           return (
-            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
+            <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900 rounded-xl border border-slate-700/80 mb-1.5">
               <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
               <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
               <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
@@ -346,278 +115,4 @@
                   <line x1="100" y1="34" x2="158" y2="68" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
                   <circle cx="146" cy="60" r="6.5" fill="#ef4444" />
                   <line x1="158" y1="68" x2="142" y2="74" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
-                  <line x1="142" y1="74" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="4.5" strokeLinecap="round" />
-                  <circle cx="168" cy="72" r="7" fill="#fcd34d" />
-                </g>
-              )}
-              {stepIndex === 2 && (
-                <g>
-                  <line x1="132" y1="76" x2="118" y2="42" stroke="#22c55e" strokeWidth="3" />
-                  <polygon points="118,42 114,51 125,48" fill="#22c55e" />
-                  <line x1="45" y1="82" x2="95" y2="24" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
-                  <line x1="95" y1="24" x2="145" y2="54" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
-                  <circle cx="138" cy="48" r="6" fill="#22c55e" opacity="0.85" />
-                  <line x1="145" y1="54" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
-                  <circle cx="156" cy="54" r="7" fill="#fcd34d" />
-                </g>
-              )}
-            </svg>
-          );
-        }
-
-        return (
-          <svg viewBox="0 0 230 96" className="w-full h-24 bg-slate-900/95 rounded-xl border border-slate-700/80 mb-1.5">
-            <line x1="10" y1="84" x2="220" y2="84" stroke="#334155" strokeWidth="3" />
-            <rect x="8" y="6" width="96" height="17" rx="4" fill="#ef444425" stroke="#ef444460" />
-            <text x="56" y="17" fill="#fca5a5" fontSize="9.5" fontWeight="bold" textAnchor="middle">
-              🔥 {muscleHighlight || "Đùi & Mông"}
-            </text>
-            <rect x="160" y="6" width="60" height="18" rx="4" fill="#000000bb" />
-            <text x="190" y="18" fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle">
-              STEP {stepIndex + 1}
-            </text>
-            {stepIndex === 0 && (
-              <g>
-                <line x1="90" y1="15" x2="90" y2="82" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="4" />
-                <circle cx="110" cy="18" r="7" fill="#fcd34d" />
-                <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
-                <line x1="110" y1="52" x2="110" y2="82" stroke="#e2e8f0" strokeWidth="6" strokeLinecap="round" />
-                <line x1="110" y1="32" x2="136" y2="32" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-              </g>
-            )}
-            {stepIndex === 1 && (
-              <g>
-                <line x1="68" y1="25" x2="68" y2="62" stroke="#ef4444" strokeWidth="3" />
-                <polygon points="68,62 63,53 73,53" fill="#ef4444" />
-                <circle cx="115" cy="30" r="7" fill="#fcd34d" />
-                <line x1="112" y1="38" x2="92" y2="58" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
-                <line x1="92" y1="58" x2="118" y2="58" stroke="#ef4444" strokeWidth="6" strokeLinecap="round" />
-                <line x1="118" y1="58" x2="112" y2="82" stroke="#e2e8f0" strokeWidth="5" strokeLinecap="round" />
-                <line x1="110" y1="42" x2="140" y2="42" stroke="#e2e8f0" strokeWidth="4" strokeLinecap="round" />
-              </g>
-            )}
-            {stepIndex === 2 && (
-              <g>
-                <line x1="68" y1="65" x2="68" y2="25" stroke="#22c55e" strokeWidth="3" />
-                <polygon points="68,25 63,34 73,34" fill="#22c55e" />
-                <circle cx="110" cy="18" r="7" fill="#fcd34d" />
-                <line x1="110" y1="26" x2="110" y2="52" stroke="#38bdf8" strokeWidth="7" strokeLinecap="round" />
-                <line x1="110" y1="52" x2="110" y2="82" stroke="#22c55e" strokeWidth="6" strokeLinecap="round" />
-              </g>
-            )}
-          </svg>
-        );
-      };
-
-      if (isLive) return <div className="p-0.5">{renderPose(liveStep)}</div>;
-      return (
-        <div className="space-y-1">
-          {renderPose(0)}
-          {renderPose(1)}
-          {renderPose(2)}
-        </div>
-      );
-    };
-
-    const STANDARD_WARMUP = [
-      {
-        id: "wu_auto_1",
-        phaseTag: "🔥 KHỞI ĐỘNG ĐẦU BUỔI",
-        name: "Xoay Mở Khớp Vai, Cổ Tay & Cổ Chân",
-        baseSets: 1,
-        repsText: "60 giây",
-        workSec: 60,
-        rest: 15,
-        type: "squat",
-        muscle: "Dịch Khớp & Cổ Chân",
-        steps: [
-          "STEP 1: Xoay kỹ cổ chân, khớp gối, khớp hông và xoay mở bả vai mỗi bên 15 giây.",
-          "STEP 2: Thả lỏng vai gáy, hít thở sâu làm ấm cơ thể.",
-          "STEP 3: Sẵn sàng vào các bài tập chính."
-        ]
-      }
-    ];
-
-    const STANDARD_COOLDOWN = [
-      {
-        id: "cd_auto_1",
-        phaseTag: "🧘 GIÃN CƠ CUỐI BUỔI",
-        name: "Child's Pose (Tư Thế Em Bé Thả Lỏng Lưng)",
-        baseSets: 1,
-        repsText: "60 giây",
-        workSec: 60,
-        rest: 15,
-        type: "pike",
-        muscle: "Thắt Lưng & Khớp Vai",
-        steps: [
-          "STEP 1: Quỳ gối trên sàn, ngồi lùi mông chạm nhẹ lên hai gót chân.",
-          "STEP 2: Vươn dài hai tay về phía trước, hạ thấp ngực xuống sàn.",
-          "STEP 3: Hít sâu bằng mũi 4 giây, thở chậm bằng miệng 6 giây để hạ nhịp tim."
-        ]
-      }
-    ];
-
-    const WORKOUT_PLAN = [
-      {
-        day: "Thứ 2",
-        title: "Thân Trên & Chống Gù Cột Sống",
-        duration: "35 phút",
-        isRest: false,
-        focus: "Mở ngực, khỏe bả vai, giải phóng áp lực đĩa đệm",
-        exercises: [
-          {
-            id: "m1",
-            name: "Incline Push-up (Chống đẩy điểm tựa)",
-            baseSets: 3,
-            repsText: "12 lần",
-            workSec: 45,
-            rest: 45,
-            type: "pushup",
-            muscle: "Ngực & Tay sau",
-            steps: [
-              "STEP 1: Chống hai tay lên mặt bàn hoặc sàn, lưng - mông tạo thành đường thẳng.",
-              "STEP 2: Hạ ngực xuống chậm rãi, khép khuỷu tay 45 độ so với thân.",
-              "STEP 3: Đẩy mạnh thân người trở về vị trí ban đầu."
-            ]
-          },
-          {
-            id: "m2",
-            name: "Pike Push-up (Đẩy vai chữ V)",
-            baseSets: 3,
-            repsText: "10 lần",
-            workSec: 40,
-            rest: 60,
-            type: "pike",
-            muscle: "Cơ Vai & Lưng trên",
-            steps: [
-              "STEP 1: Đẩy hông lên cao tạo góc chữ V ngược, gót chân hơi nhón.",
-              "STEP 2: Gập khuỷu tay hạ đỉnh đầu xuống hướng về trước hai bàn tay.",
-              "STEP 3: Đẩy ngược thân người về lại vị trí đỉnh chữ V."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Thứ 3",
-        title: "Thân Dưới & Khớp Gối Linh Hoạt",
-        duration: "35 phút",
-        isRest: false,
-        focus: "Kích hoạt cơ mông - đùi bị ỳ sau nhiều giờ ngồi ghế",
-        exercises: [
-          {
-            id: "tu1",
-            name: "Bodyweight Squat (Squat chuẩn form)",
-            baseSets: 4,
-            repsText: "15 lần",
-            workSec: 45,
-            rest: 45,
-            type: "squat",
-            muscle: "Đùi trước & Mông",
-            steps: [
-              "STEP 1: Hai chân mở rộng bằng vai, mũi chân mở 15 độ.",
-              "STEP 2: Đẩy hông ra sau và hạ đùi song song mặt sàn.",
-              "STEP 3: Đạp gót đứng thẳng dậy, siết chặt cơ mông."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Thứ 4",
-        title: "Phục Hồi Chair Yoga & Somatic",
-        duration: "20 phút",
-        isRest: true,
-        focus: "Kéo giãn đĩa đệm lưng trên ghế, đào thải axit uric",
-        exercises: [
-          {
-            id: "w1",
-            name: "Chair Cat-Cow (Mở ngực trên ghế)",
-            baseSets: 3,
-            repsText: "60 giây",
-            workSec: 60,
-            rest: 20,
-            type: "squat",
-            muscle: "Cột sống & Vai",
-            steps: [
-              "STEP 1: Ngồi thẳng trên mép ghế, hai bàn chân phẳng trên sàn.",
-              "STEP 2: Hít vào ưỡn ngực, khép hai bả vai ra sau.",
-              "STEP 3: Thở ra cuộn tròn lưng ra sau, thả lỏng đầu cổ."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Thứ 5",
-        title: "Cardio Nhẹ & Đốt Mỡ Cơ Bụng",
-        duration: "40 phút",
-        isRest: false,
-        focus: "Tăng lưu thông máu thận và tim phổi không bật nhảy",
-        exercises: [
-          {
-            id: "th1",
-            name: "High Knee March (Nâng đùi tại chỗ)",
-            baseSets: 4,
-            repsText: "45 giây",
-            workSec: 45,
-            rest: 30,
-            type: "squat",
-            muscle: "Tim mạch & Bụng dưới",
-            steps: [
-              "STEP 1: Đứng thẳng, hai tay co tự nhiên.",
-              "STEP 2: Nâng cao đùi vuông góc bụng, đánh tay nhịp nhàng.",
-              "STEP 3: Đổi chân êm ái, tiếp đất nhẹ nhàng bằng nửa bàn chân."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Thứ 6",
-        title: "Sức Bền Toàn Thân & Dẻo Dai",
-        duration: "35 phút",
-        isRest: false,
-        focus: "Tăng cường liên kết nhóm cơ lõi và bắp chân",
-        exercises: [
-          {
-            id: "f1",
-            name: "Squat to Calf Raise (Squat nhón gót)",
-            baseSets: 3,
-            repsText: "15 lần",
-            workSec: 45,
-            rest: 45,
-            type: "squat",
-            muscle: "Đùi & Bắp chuối",
-            steps: [
-              "STEP 1: Đứng hai chân rộng bằng vai.",
-              "STEP 2: Hạ người squat chuẩn form.",
-              "STEP 3: Khi đứng thẳng kết hợp nhón cao hai gót chân để bơm máu tĩnh mạch."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Thứ 7",
-        title: "Vận Động Ngoài Trời Hoặc Wall Flow",
-        duration: "30 phút",
-        isRest: false,
-        focus: "Đốt mỡ tự nhiên, kích hoạt khớp hông",
-        exercises: [
-          {
-            id: "sa1",
-            name: "Sumo Squat (Squat rộng chân)",
-            baseSets: 3,
-            repsText: "15 lần",
-            workSec: 45,
-            rest: 45,
-            type: "squat",
-            muscle: "Đùi trong & Hông",
-            steps: [
-              "STEP 1: Chân mở rộng gấp rưỡi vai, mũi chân mở 45 độ.",
-              "STEP 2: Hạ thẳng hông xuống, gối hướng theo mũi chân.",
-              "STEP 3: Đẩy người đứng thẳng lên, siết cơ đùi trong."
-            ]
-          }
-        ]
-      },
-      {
-        day: "Chủ Nhật",
-        title: "Nghỉ Ngơi Tái Tạo & Giấc Ngủ",
-        duration:
+                  <line x1="142" y1="74" x2="155" y2="82" stroke="#e2e8f0" strokeWidth="4.5" stroke
