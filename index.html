@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="FitFlow 3D" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#090d16" />
-  <title>FitFlow Pro Max v5.2 - 3D Mixamo Direct Engine</title>
+  <title>FitFlow Pro Max v5.3 - 3D jsDelivr CDN</title>
 
   <!-- Kết nối PWA App -->
   <link rel="manifest" href="./manifest.json" />
@@ -59,9 +59,10 @@
   <script type="text/babel">
     const { useState, useEffect, useMemo, useRef } = React;
 
-    const MODEL_RAW_URL = "https://raw.githubusercontent.com/anhphamtuan028-prog/Fitflow/main/model.glb";
+    // Đường dẫn qua jsDelivr mở CORS 100% cho WebGL
+    const MODEL_CDN_URL = "https://cdn.jsdelivr.net/gh/anhphamtuan028-prog/Fitflow@main/model.glb";
 
-    // ÂM THANH BÍP & GIỌNG ĐỌC HUẤN LUYỆN VIÊN TIẾNG VIỆT
+    // Âm thanh bíp báo nhịp
     const playBeep = (freq = 880, duration = 180, type = "sine") => {
       try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -77,6 +78,7 @@
       } catch (e) {}
     };
 
+    // Giọng đọc huấn luyện viên tiếng Việt
     const speakVN = (text, enabled = true) => {
       if (!enabled || typeof window === "undefined" || !("speechSynthesis" in window)) return;
       try {
@@ -88,8 +90,8 @@
       } catch (e) {}
     };
 
-    // COMPONENT THREE.JS GLTF 3D VIEWER
-    const ThreeGLTFViewer = ({ modelUrl = MODEL_RAW_URL, height = 220 }) => {
+    // Component Three.js nạp model 3D
+    const ThreeGLTFViewer = ({ modelUrl = MODEL_CDN_URL, height = 230 }) => {
       const containerRef = useRef(null);
       const [status, setStatus] = useState("loading");
       const [errorDetail, setErrorDetail] = useState("");
@@ -142,6 +144,7 @@
               if (!isMounted) return;
               const model = gltf.scene;
 
+              // Tự động căn giữa tâm tuyệt đối
               const box = new THREE.Box3().setFromObject(model);
               const size = box.getSize(new THREE.Vector3());
               const center = box.getCenter(new THREE.Vector3());
@@ -168,14 +171,14 @@
               if (!isMounted) return;
               console.error("Lỗi nạp GLB:", err);
               setStatus("error");
-              setErrorDetail("Không thể nạp file model.glb từ GitHub");
+              setErrorDetail("Lỗi nạp file 3D qua CDN");
             }
           );
         };
 
         initLoader();
 
-        // Xoay chạm vuốt 360 độ
+        // Thao tác xoay chạm vuốt 360 độ
         let isDragging = false;
         let prevX = 0, prevY = 0;
         let rotY = 0, rotX = 0;
@@ -264,7 +267,7 @@
       );
     };
 
-    // SƠ ĐỒ ĐỒ HỌA DỰ PHÒNG STEP 1-2-3
+    // Sơ đồ dự phòng Step 1-2-3
     const StepDiagram = ({ type, isLive, muscleHighlight }) => {
       const [liveStep, setLiveStep] = useState(0);
 
@@ -424,7 +427,7 @@
       );
     };
 
-    // KHỞI ĐỘNG & GIÃN CƠ
+    // Khởi động & Giãn cơ
     const STANDARD_WARMUP = [
       {
         id: "wu_auto_1",
@@ -463,7 +466,7 @@
       }
     ];
 
-    // LỊCH TẬP 7 NGÀY
+    // Lịch tập 7 ngày
     const WORKOUT_PLAN = [
       {
         day: "Thứ 2",
@@ -668,7 +671,7 @@
       }
     ];
 
-    // DINH DƯỠNG & PURIN
+    // Dinh dưỡng & Purin
     const MEAL_PLAN = [
       { day: "Thứ 2", b: "2 trứng gà luộc + 1 bánh mì đen", l: "Cơm gạo lứt + 150g Đậu phụ sốt cà chua", s: "Sữa chua Hy Lạp + Hạt hạnh nhân", d: "90g Ức gà chần bỏ nước + Salad" },
       { day: "Thứ 3", b: "Yến mạch sữa tách béo + 1 trứng ốp", l: "Bún lứt + 100g Thăn heo luộc bỏ nước", s: "Sữa tươi tách béo 200ml", d: "Đậu phụ non hấp trứng + Rau luộc" },
@@ -696,7 +699,7 @@
       const [liveModeMap, setLiveModeMap] = useState({});
 
       const [stats, setStats] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("fitflow_stats_v52") || '{"xp":260,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 260, streak: 3, water: 5, doneIds: [] }; }
+        try { return JSON.parse(localStorage.getItem("fitflow_stats_v53") || '{"xp":260,"streak":3,"water":5,"doneIds":[]}'); } catch { return { xp: 260, streak: 3, water: 5, doneIds: [] }; }
       });
 
       // Guided Player
@@ -706,7 +709,7 @@
       const [playerSec, setPlayerSec] = useState(5);
       const [playerPaused, setPlayerPaused] = useState(false);
 
-      useEffect(() => { localStorage.setItem("fitflow_stats_v52", JSON.stringify(stats)); }, [stats]);
+      useEffect(() => { localStorage.setItem("fitflow_stats_v53", JSON.stringify(stats)); }, [stats]);
 
       const toggleJointSafe = () => {
         const next = !jointSafeMode;
@@ -803,7 +806,7 @@
                     {stats.xp} XP
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">Mixamo 3D Direct CDN • Voice Coach • Low-Purine</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">Mixamo 3D Engine • Voice Coach • Low-Purine</p>
               </div>
 
               <div className="flex items-center gap-1.5">
@@ -904,8 +907,8 @@
                         </button>
                       </div>
 
-                      {/* KHUNG THREE.JS NẠP TRỰC TIẾP URL GITHUB */}
-                      <ThreeGLTFViewer modelUrl={MODEL_RAW_URL} height={220} />
+                      {/* Khung Three.js nạp trực tiếp qua jsDelivr */}
+                      <ThreeGLTFViewer modelUrl={MODEL_CDN_URL} height={230} />
 
                       {/* Sơ đồ động Step 1-2-3 */}
                       <StepDiagram type={ex.type} isLive={!!liveModeMap[ex.id]} muscleHighlight={ex.muscle} />
@@ -983,7 +986,7 @@
             )}
           </main>
 
-          {/* MÀN HÌNH PLAYER TOÀN MÀN HÌNH */}
+          {/* MÀN HÌNH WORKOUT PLAYER TOÀN MÀN HÌNH */}
           {playerOpen && (
             <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col justify-between p-4 safe-top safe-bottom">
               {playerPhase !== "finish" ? (
@@ -1027,7 +1030,7 @@
                       </div>
                     ) : (
                       <>
-                        <ThreeGLTFViewer modelUrl={MODEL_RAW_URL} height={220} />
+                        <ThreeGLTFViewer modelUrl={MODEL_CDN_URL} height={230} />
                         <StepDiagram type={activeCurrentEx.type} isLive={true} muscleHighlight={activeCurrentEx.muscle} />
                       </>
                     )}
